@@ -1,5 +1,5 @@
 import AuthContainer from '../AuthContainer';
 
-export default function SignupPage() {
+export default function ResetPasswordPage() {
   return <AuthContainer />;
 } 

@@ -1,12 +1,104 @@
+"use client";
+
 import NavigationSidebar from "@/components/navigation-sidebar";
 import TrendingSidebar from "@/components/trending-sidebar";
 import MobileNav from "@/components/mobile-nav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FandomAvatar } from "@/components/ui/fandom-avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function FandomsPage() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    reason: "",
+    social: ""
+  });
+  const [formErrors, setFormErrors] = useState({
+    name: false,
+    description: false,
+    reason: false
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoginAlert, setShowLoginAlert] = useState(false);
+
+  // Simulación de verificación de login (en un caso real, esto vendría de un contexto de autenticación)
+  useEffect(() => {
+    // Aquí podrías verificar si el usuario está logeado con una cookie, token, etc.
+    // Por ahora, simulamos que no está logeado
+    setIsLoggedIn(false);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    const fieldName = id.replace('fandom-', '');
+    
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+    
+    // Limpiar el error cuando se escribe
+    if (fieldName !== 'social' && formErrors[fieldName as keyof typeof formErrors]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [fieldName]: false
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      name: !formData.name.trim(),
+      description: !formData.description.trim(),
+      reason: !formData.reason.trim()
+    };
+    
+    setFormErrors(newErrors);
+    return !Object.values(newErrors).some(Boolean);
+  };
+
+  const handleSubmit = () => {
+    if (!isLoggedIn) {
+      setShowLoginAlert(true);
+      return;
+    }
+    
+    if (validateForm()) {
+      setIsSubmitting(true);
+      
+      // Simulación de envío al servidor
+      setTimeout(() => {
+        alert("¡Solicitud enviada con éxito! Te notificaremos cuando sea revisada.");
+        setIsSubmitting(false);
+        setModalOpen(false);
+        // Resetear el formulario
+        setFormData({
+          name: "",
+          description: "",
+          reason: "",
+          social: ""
+        });
+      }, 1000);
+    }
+  };
+
+  const handleButtonClick = () => {
+    if (!isLoggedIn) {
+      setShowLoginAlert(true);
+    } else {
+      setModalOpen(true);
+    }
+  };
+
   // Datos de ejemplo para los fandoms
   const fandoms = [
     {
@@ -215,15 +307,18 @@ export default function FandomsPage() {
               ))}
             </div>
             
-            {/* Botón para crear nuevo fandom */}
+            {/* Botón para solicitar nuevo fandom */}
             <div className="mt-8 flex justify-center">
-              <Button className="rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 text-white px-6 py-2.5 text-sm font-medium shadow-sm hover:shadow hover:opacity-90 transition-all flex items-center gap-2">
+              <Button 
+                className="rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 text-white px-6 py-2.5 text-sm font-medium shadow-sm hover:shadow hover:opacity-90 transition-all flex items-center gap-2"
+                onClick={handleButtonClick}
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"></circle>
                   <line x1="12" y1="8" x2="12" y2="16"></line>
                   <line x1="8" y1="12" x2="16" y2="12"></line>
                 </svg>
-                Crear nuevo fandom
+                Solicitar nuevo fandom
               </Button>
             </div>
           </div>
@@ -232,6 +327,116 @@ export default function FandomsPage() {
         {/* Columna derecha - Tendencias */}
         <TrendingSidebar />
       </div>
+      
+      {/* Alerta de inicio de sesión */}
+      {showLoginAlert && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-xl font-bold mb-2">Inicio de sesión requerido</h3>
+            <p className="text-gray-600 mb-4">
+              Para solicitar la creación de un nuevo fandom, debes iniciar sesión en tu cuenta.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowLoginAlert(false)}
+                className="rounded-full"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                className="rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 text-white"
+                onClick={() => {
+                  setShowLoginAlert(false);
+                  // En un caso real, redirigirías a la página de login
+                  // window.location.href = '/login';
+                }}
+              >
+                Iniciar sesión
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal para solicitar nuevo fandom */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent">Solicitar nuevo fandom</DialogTitle>
+            <DialogDescription>
+              Envía tu solicitud para crear un nuevo fandom en 7Kpop. Revisaremos tu solicitud y te notificaremos cuando sea aprobada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="fandom-name">Nombre del grupo/artista *</Label>
+              <Input 
+                id="fandom-name" 
+                placeholder="Ej. IVE, BTS, BLACKPINK..." 
+                value={formData.name}
+                onChange={handleInputChange}
+                className={formErrors.name ? "border-red-500 focus-visible:ring-red-400" : ""}
+              />
+              {formErrors.name && (
+                <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="fandom-description">Descripción del fandom *</Label>
+              <Textarea 
+                id="fandom-description" 
+                placeholder="Escribe una breve descripción sobre este fandom..." 
+                className={`min-h-[80px] ${formErrors.description ? "border-red-500 focus-visible:ring-red-400" : ""}`}
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+              {formErrors.description && (
+                <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="fandom-reason">¿Por qué deberíamos aprobar este fandom? *</Label>
+              <Textarea 
+                id="fandom-reason" 
+                placeholder="Cuéntanos por qué este fandom sería valioso para la comunidad..." 
+                className={`min-h-[100px] ${formErrors.reason ? "border-red-500 focus-visible:ring-red-400" : ""}`}
+                value={formData.reason}
+                onChange={handleInputChange}
+              />
+              {formErrors.reason && (
+                <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="fandom-social">Enlaces a redes sociales (opcional)</Label>
+              <Input 
+                id="fandom-social" 
+                placeholder="Instagram, Twitter, etc." 
+                value={formData.social}
+                onChange={handleInputChange}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">* Campos obligatorios</p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setModalOpen(false)}
+              className="rounded-full"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              className="rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 text-white"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Enviando..." : "Enviar solicitud"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Navegación móvil */}
       <MobileNav />

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ThumbsUp, ThumbsDown, MessageSquare, Share, MoreVertical } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageSquare, Share, MoreVertical, Flag } from "lucide-react";
 
 type Post = {
   id: number;
@@ -182,10 +182,15 @@ const PostCard = ({ post }: { post: Post }) => {
           </Link>
         </div>
         
-        <Button variant="ghost" size="sm" className="flex items-center gap-1.5 text-xs h-8 text-gray-600 hover:bg-gray-100 rounded-lg">
-          <Share size={16} />
-          <span>Compartir</span>
-        </Button>
+        <div className="flex items-center">
+          <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs h-8 text-gray-600 hover:bg-gray-100 rounded-lg">
+            <Share size={16} />
+            <span className="hidden sm:inline">Compartir</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="flex items-center text-xs h-8 text-gray-600 hover:bg-gray-100 rounded-lg ml-0.5">
+            <Flag size={16} />
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
