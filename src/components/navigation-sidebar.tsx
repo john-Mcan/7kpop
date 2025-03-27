@@ -79,11 +79,12 @@ const NavigationSidebar = () => {
         ) : user ? (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center mb-3">
-              <UserAvatar 
-                text={user.email?.charAt(0) || "U"}
-                size="lg"
-                className="mr-3"
-              />
+              <div className="w-10 h-10 mr-3 flex-shrink-0">
+                <UserAvatar 
+                  text={user.email?.charAt(0) || "U"}
+                  size="full"
+                />
+              </div>
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium text-gray-800 truncate">
                   {user.email}

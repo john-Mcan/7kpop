@@ -3,7 +3,7 @@ import Link from "next/link";
 
 interface UserAvatarProps {
   text: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   username?: string;
   linkToProfile?: boolean;
   colorClass?: string;
@@ -22,13 +22,22 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   const sizeClasses = {
     sm: "w-7 h-7 text-xs",
     md: "w-8 h-8 text-xs",
-    lg: "w-10 h-10 text-sm"
+    lg: "w-10 h-10 text-sm",
+    xl: "w-14 h-14 text-base",
+    full: "w-full h-full text-xl"
   };
+  
+  // Combinamos las clases de manera manual
+  const avatarClasses = `
+    ${sizeClasses[size] || sizeClasses.md} 
+    rounded-full bg-gradient-to-r 
+    ${colorClass} 
+    text-white flex items-center justify-center font-medium flex-shrink-0 
+    ${className}
+  `;
 
   const avatarContent = (
-    <div 
-      className={`${sizeClasses[size]} rounded-full bg-gradient-to-r ${colorClass} text-white flex items-center justify-center font-medium flex-shrink-0 ${className}`}
-    >
+    <div className={avatarClasses.replace(/\s+/g, ' ').trim()}>
       {text.charAt(0).toUpperCase()}
     </div>
   );

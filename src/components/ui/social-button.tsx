@@ -9,6 +9,7 @@ interface SocialButtonProps {
   variant?: "default" | "active" | "primary";
   size?: "sm" | "md";
   className?: string;
+  labelClassName?: string;
 }
 
 const SocialButton: React.FC<SocialButtonProps> = ({
@@ -18,6 +19,7 @@ const SocialButton: React.FC<SocialButtonProps> = ({
   variant = "default",
   size = "sm",
   className = "",
+  labelClassName = "",
 }) => {
   const variantClasses = {
     default: "text-gray-600 hover:bg-gray-100",
@@ -38,7 +40,11 @@ const SocialButton: React.FC<SocialButtonProps> = ({
       onClick={onClick}
     >
       <Icon size={size === 'sm' ? 16 : 18} />
-      {label !== undefined && <span className={variant === "active" ? "font-medium" : ""}>{label}</span>}
+      {label !== undefined && (
+        <span className={`${variant === "active" ? "font-medium" : ""} ${labelClassName}`}>
+          {label}
+        </span>
+      )}
     </Button>
   );
 };

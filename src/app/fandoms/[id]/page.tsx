@@ -74,10 +74,9 @@ export default function FandomPage({ params }: FandomPageProps) {
             {/* Avatar del fandom */}
             <div className="flex justify-center sm:justify-start -mt-14 sm:-mt-16 md:-mt-20 mb-4 sm:mb-0 relative z-10">
               <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-xl overflow-hidden border-4 border-white shadow-md">
-                <FandomAvatar 
-                  alt={fandomData.nombre}
-                  initial={fandomData.inicial}
-                />
+                <div className="w-full h-full bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center text-white text-3xl sm:text-4xl md:text-5xl font-bold">
+                  {fandomData.inicial}
+                </div>
               </div>
             </div>
             
@@ -202,8 +201,12 @@ export default function FandomPage({ params }: FandomPageProps) {
             <Card className="bg-white border border-gray-100 shadow-sm mb-6 overflow-hidden">
               <div className="p-4 sm:p-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-600 flex-shrink-0 flex items-center justify-center text-white font-semibold shadow-sm">
-                    {fandomData.inicial}
+                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                    <FandomAvatar
+                      alt={fandomData.nombre}
+                      initial={fandomData.inicial}
+                      colorClass="from-purple-600 to-indigo-600"
+                    />
                   </div>
                   <div className="flex-1">
                     <div className="relative">

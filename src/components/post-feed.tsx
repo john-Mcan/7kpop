@@ -121,11 +121,11 @@ const PostCard = ({ post }: { post: Post }) => {
     <div className="relative">
       <Card className="border-gray-200 shadow-sm rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow">
         <CardHeader className="p-4 pb-3 flex flex-row items-start gap-3">
-          <Link href={`/fandoms/${post.fandom.name.toLowerCase()}`}>
+          <Link href={`/fandoms/${post.fandom.name.toLowerCase()}`} className="flex-shrink-0 w-10 h-10">
             <UserAvatar 
               text={post.fandom.avatar}
               colorClass={getFandomColor(post.fandom.name, 'from-to')}
-              size="lg"
+              size="full"
             />
           </Link>
           <div className="flex-1">
@@ -196,8 +196,9 @@ const PostCard = ({ post }: { post: Post }) => {
           <div className="flex items-center">
             <SocialButton 
               icon={Share} 
-              label={window.innerWidth >= 640 ? "Compartir" : undefined} 
+              label="Compartir"
               className="sm:gap-1"
+              labelClassName="hidden sm:inline"
             />
             <SocialButton 
               icon={Flag} 

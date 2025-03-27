@@ -189,11 +189,14 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       className={`py-3 ${!isReply ? "border-b border-gray-100" : "pl-4 ml-6 mt-3 border-l-2 border-gray-100"}`}
     >
       <div className="flex gap-2">
-        <UserAvatar
-          text={comment.author.avatar || comment.author.username}
-          username={comment.author.username}
-          linkToProfile={true}
-        />
+        <div className="w-8 h-8 flex-shrink-0">
+          <UserAvatar
+            text={comment.author.avatar || comment.author.username}
+            username={comment.author.username}
+            linkToProfile={true}
+            size="full"
+          />
+        </div>
         <div className="flex-1">
           <div className="flex items-center justify-between">
             <Link href={`/perfil/${comment.author.username}`} className="text-sm font-medium text-gray-900 hover:text-purple-700">
@@ -246,10 +249,12 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   // Componente para ingresar una respuesta
   const ReplyInput = ({ comment }: { comment: Comment }) => (
     <div className="flex items-start gap-2 mt-3 ml-8 pl-4 border-l-2 border-gray-100">
-      <UserAvatar 
-        text="U"
-        size="sm"
-      />
+      <div className="w-7 h-7 flex-shrink-0">
+        <UserAvatar 
+          text="U"
+          size="full"
+        />
+      </div>
       <div className="flex-1 relative">
         <div className="flex items-center text-xs text-gray-500 mb-2">
           <span>Respondiendo a <span className="font-medium">{comment.author.username}</span></span>
@@ -285,10 +290,12 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   // Componente para ingresar un comentario
   const CommentInput = () => (
     <div className="flex items-start gap-3 mt-4">
-      <UserAvatar 
-        text="U"
-        size="sm"
-      />
+      <div className="w-8 h-8 flex-shrink-0">
+        <UserAvatar 
+          text="U"
+          size="full"
+        />
+      </div>
       <div className="flex-1 relative">
         <textarea
           placeholder="Escribe un comentario..."
