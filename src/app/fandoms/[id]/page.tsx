@@ -6,28 +6,50 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FandomAvatar } from "@/components/ui/fandom-avatar";
 import { FandomBanner } from "@/components/ui/fandom-banner";
+import { getFandomBySlug, getFandomById } from "@/lib/data/fandoms";
 import Link from "next/link";
 import { Image, Video, MapPin } from "lucide-react";
 
 interface FandomPageProps {
   params: {
-    id: string;
+    id: string; // Ahora este parámetro es el slug del fandom
   };
 }
 
 export default function FandomPage({ params }: FandomPageProps) {
-  // Convertir el ID a número
-  const fandomId = parseInt(params.id);
+  // Obtener el slug del fandom (normalizado a minúsculas)
+  const slug = params.id.toLowerCase();
+  
+  // Obtener la información del fandom basada en el slug
+  let fandomInfo = getFandomBySlug(slug);
+  
+  // Si no se encuentra por slug, intentar por ID en caso de URLs antiguas
+  if (!fandomInfo) {
+    const numId = parseInt(slug);
+    if (!isNaN(numId)) {
+      fandomInfo = getFandomById(numId);
+    }
+  }
+  
+  // Si aún no se encuentra, usar datos por defecto
+  if (!fandomInfo) {
+    fandomInfo = {
+      id: 0,
+      name: `Fandom ${slug}`,
+      slug: slug
+    };
+  }
 
   // Datos de ejemplo para un fandom específico
   const fandomData = {
-    id: fandomId,
-    nombre: getFandomName(fandomId),
+    id: fandomInfo.id,
+    nombre: fandomInfo.name,
+    slug: fandomInfo.slug,
     descripcion: "Comunidad oficial en 7Kpop dedicada a los fans de este increíble grupo. Comparte tus pensamientos, fotos, videos y conecta con otros fans.",
     miembros: 15600,
     posts: 4325,
     creacion: "Enero 2023",
-    inicial: getFandomName(fandomId).charAt(0),
+    inicial: fandomInfo.name.charAt(0),
     administradores: [
       { id: 1, nombre: "María González", username: "mariakpop" },
       { id: 2, nombre: "Carlos Sánchez", username: "carlosk" }
@@ -256,23 +278,4 @@ export default function FandomPage({ params }: FandomPageProps) {
       <MobileNav />
     </>
   );
-}
-
-// Función auxiliar para obtener el nombre del fandom según su ID
-function getFandomName(id: number): string {
-  const fandomNames: Record<number, string> = {
-    1: "BTS",
-    2: "BLACKPINK",
-    3: "TWICE",
-    4: "SEVENTEEN",
-    5: "NewJeans",
-    6: "aespa",
-    7: "Stray Kids",
-    8: "IVE",
-    // Más nombres por defecto en caso de que no exista el ID
-    9: "EXO",
-    10: "Red Velvet"
-  };
-  
-  return fandomNames[id] || `Fandom ${id}`;
 } 

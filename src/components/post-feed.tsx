@@ -10,6 +10,7 @@ import { useDeviceDetect } from "@/lib/hooks/useDeviceDetect";
 import UserAvatar from "./ui/user-avatar";
 import SocialButton from "./ui/social-button";
 import { getFandomColor } from "@/lib/utils/fandom-colors";
+import { getFandomByName, getFandomById, fandomsData } from "@/lib/data/fandoms";
 
 type Post = {
   id: number;
@@ -117,11 +118,15 @@ const PostCard = ({ post }: { post: Post }) => {
     setShowComments(!showComments);
   };
 
+  // Obtener el slug del fandom para la URL
+  const fandom = getFandomByName(post.fandom.name);
+  const fandomSlug = fandom?.slug || post.fandom.name.toLowerCase();
+
   return (
     <div className="relative">
       <Card className="border-gray-200 shadow-sm rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow">
         <CardHeader className="p-4 pb-3 flex flex-row items-start gap-3">
-          <Link href={`/fandoms/${post.fandom.name.toLowerCase()}`} className="flex-shrink-0 w-10 h-10">
+          <Link href={`/fandoms/${fandomSlug}`} className="flex-shrink-0 w-10 h-10">
             <UserAvatar 
               text={post.fandom.avatar}
               colorClass={getFandomColor(post.fandom.name, 'from-to')}
@@ -130,7 +135,7 @@ const PostCard = ({ post }: { post: Post }) => {
           </Link>
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Link href={`/fandoms/${post.fandom.name.toLowerCase()}`} className="font-semibold text-sm hover:text-purple-700 transition-colors">
+              <Link href={`/fandoms/${fandomSlug}`} className="font-semibold text-sm hover:text-purple-700 transition-colors">
                 {post.fandom.name}
               </Link>
               <p className="text-gray-500 text-xs">• {post.createdAt}</p>
@@ -140,11 +145,15 @@ const PostCard = ({ post }: { post: Post }) => {
                 {post.author.username}
               </Link>
               <div className="ml-2 flex flex-wrap">
-                {post.author.favoriteGroups.map((group, idx) => (
-                  <Link href={`/fandoms/${group.toLowerCase()}`} key={idx} className="inline-block px-1.5 py-0.5 bg-gray-100 text-purple-700 rounded-full text-[10px] mr-1 mb-1 hover:bg-purple-100 transition-colors">
-                    {group}
-                  </Link>
-                ))}
+                {post.author.favoriteGroups.map((group, idx) => {
+                  const groupFandom = getFandomByName(group);
+                  const groupSlug = groupFandom?.slug || group.toLowerCase().replace(/\s+/g, '-');
+                  return (
+                    <Link href={`/fandoms/${groupSlug}`} key={idx} className="inline-block px-1.5 py-0.5 bg-gray-100 text-purple-700 rounded-full text-[10px] mr-1 mb-1 hover:bg-purple-100 transition-colors">
+                      {group}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </div>

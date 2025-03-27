@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { fandomsData } from "@/lib/data/fandoms";
 
 export default function FandomsPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -99,81 +100,17 @@ export default function FandomsPage() {
     }
   };
 
-  // Datos de ejemplo para los fandoms
-  const fandoms = [
-    {
-      id: 1,
-      nombre: "BTS",
-      descripcion: "El fandom oficial de BTS (Bangtan Sonyeondan) en 7Kpop",
-      miembros: 15600,
-      posts: 4325,
-      imagenColor: "from-purple-600 to-purple-400",
-      inicial: "B"
-    },
-    {
-      id: 2,
-      nombre: "BLACKPINK",
-      descripcion: "Comunidad de BLINKS en América Latina",
-      miembros: 12450,
-      posts: 3189,
-      imagenColor: "from-pink-600 to-pink-400",
-      inicial: "B"
-    },
-    {
-      id: 3,
-      nombre: "TWICE",
-      descripcion: "Para todos los ONCE que aman a TWICE",
-      miembros: 10230,
-      posts: 2876,
-      imagenColor: "from-orange-500 to-yellow-400",
-      inicial: "T"
-    },
-    {
-      id: 4,
-      nombre: "SEVENTEEN",
-      descripcion: "El hogar de CARATS en 7Kpop",
-      miembros: 9800,
-      posts: 2567,
-      imagenColor: "from-indigo-600 to-indigo-400",
-      inicial: "S"
-    },
-    {
-      id: 5,
-      nombre: "NewJeans",
-      descripcion: "Comunidad para fans de NewJeans",
-      miembros: 8700,
-      posts: 2198,
-      imagenColor: "from-blue-600 to-blue-400",
-      inicial: "N"
-    },
-    {
-      id: 6,
-      nombre: "aespa",
-      descripcion: "Para MY que apoyan a aespa",
-      miembros: 7800,
-      posts: 1876,
-      imagenColor: "from-purple-500 to-blue-400",
-      inicial: "A"
-    },
-    {
-      id: 7,
-      nombre: "Stray Kids",
-      descripcion: "El lugar de STAY en 7Kpop",
-      miembros: 7500,
-      posts: 1789,
-      imagenColor: "from-red-600 to-red-400",
-      inicial: "S"
-    },
-    {
-      id: 8,
-      nombre: "IVE",
-      descripcion: "Comunidad para DIVE",
-      miembros: 6900,
-      posts: 1678,
-      imagenColor: "from-violet-600 to-violet-400",
-      inicial: "I"
-    }
-  ];
+  // Usamos los datos del módulo centralizado
+  const fandoms = fandomsData.map(fandom => ({
+    id: fandom.id,
+    nombre: fandom.name,
+    slug: fandom.slug,
+    descripcion: `Comunidad oficial de ${fandom.name} en 7Kpop`,
+    miembros: Math.floor(Math.random() * 10000) + 5000, // Datos de ejemplo
+    posts: Math.floor(Math.random() * 3000) + 1000, // Datos de ejemplo
+    imagenColor: "from-purple-600 to-purple-400", // Esto podría mejorarse usando fandom-colors.ts
+    inicial: fandom.name.charAt(0)
+  }));
 
   // Categorías de fandoms
   const categorias = [
@@ -246,7 +183,7 @@ export default function FandomsPage() {
             {/* Grid de fandoms */}
             <div className="mt-6 grid grid-cols-1 gap-4">
               {fandoms.map((fandom) => (
-                <Link key={fandom.id} href={`/fandoms/${fandom.id}`} className="group">
+                <Link key={fandom.id} href={`/fandoms/${fandom.slug}`} className="group">
                   <Card className="bg-white border border-gray-100 shadow-sm group-hover:shadow-md group-hover:border-purple-100 transition-all overflow-hidden h-full">
                     <div className="p-4 flex flex-col h-full">
                       <div className="flex items-center gap-3 mb-3 justify-between">
