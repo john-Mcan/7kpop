@@ -900,3 +900,12 @@ WHERE id = 'USER_ID_AQUÍ';
 - [Documentación oficial de Supabase](https://supabase.com/docs)
 - [Guía de autenticación de Next.js con Supabase](https://supabase.com/docs/guides/auth/quickstarts/nextjs)
 - [Ejemplos de Row Level Security](https://supabase.com/docs/guides/auth/row-level-security) 
+
+## Nota sobre implementación de comentarios anidados
+
+La única consideración adicional es que para la integración real con Supabase, cuando se implemente:
+
+1. Al enviar un comentario de respuesta, se debe establecer el campo `parent_comment_id` con el ID del comentario al que se responde
+2. Al cargar comentarios, la estructura de árbol debe construirse adecuadamente a partir de los datos planos de Supabase
+
+Esto requerirá un procesamiento adicional en el cliente para transformar la estructura plana devuelta por Supabase en una estructura jerárquica de comentarios y respuestas para mostrar correctamente en la interfaz de usuario. 

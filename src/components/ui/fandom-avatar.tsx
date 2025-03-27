@@ -1,17 +1,23 @@
 "use client";
 
+import UserAvatar from "./user-avatar";
+
 interface FandomAvatarProps {
   src?: string;
   alt: string;
   initial: string;
+  size?: 'sm' | 'md' | 'lg';
+  colorClass?: string;
 }
 
-export function FandomAvatar({ src, alt, initial }: FandomAvatarProps) {
+export function FandomAvatar({ src, alt, initial, size = 'md', colorClass }: FandomAvatarProps) {
   // Como sabemos que las imágenes no existen,
-  // usamos directamente el fallback con la inicial
+  // usamos el componente UserAvatar con la inicial
   return (
-    <div className="w-full h-full bg-purple-600 flex items-center justify-center text-white text-xl font-bold">
-      {initial}
-    </div>
+    <UserAvatar 
+      text={initial}
+      size={size}
+      colorClass={colorClass}
+    />
   );
 } 

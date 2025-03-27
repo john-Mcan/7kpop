@@ -5,6 +5,29 @@ import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Home, Search, Vote, Users, User, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/supabase/auth-context";
+import UserAvatar from "./ui/user-avatar";
+
+// Componente para un ítem de navegación
+interface NavItemProps {
+  href: string;
+  icon: React.ElementType;
+  name: string;
+  isActive: boolean;
+}
+
+const NavItem = ({ href, icon: Icon, name, isActive }: NavItemProps) => (
+  <Link href={href} className="block">
+    <div className={`w-full py-3 px-4 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 hover:text-purple-700 transition-all duration-200 flex items-center gap-3 relative ${
+      isActive ? 'bg-white text-purple-700 shadow-sm' : 'bg-transparent'
+    }`}>
+      <Icon className="w-5 h-5" />
+      <span>{name}</span>
+      {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-purple-600 rounded-r-full" />
+      )}
+    </div>
+  </Link>
+);
 
 const NavigationSidebar = () => {
   const pathname = usePathname();
@@ -37,24 +60,15 @@ const NavigationSidebar = () => {
       </div>
       
       <nav className="space-y-2 flex-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          
-          return (
-            <Link href={item.href} key={item.href} className="block">
-              <div className={`w-full py-3 px-4 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 hover:text-purple-700 transition-all duration-200 flex items-center gap-3 relative ${
-                isActive ? 'bg-white text-purple-700 shadow-sm' : 'bg-transparent'
-              }`}>
-                <Icon className="w-5 h-5" />
-                <span>{item.name}</span>
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-purple-600 rounded-r-full" />
-                )}
-              </div>
-            </Link>
-          );
-        })}
+        {navItems.map((item) => (
+          <NavItem 
+            key={item.href}
+            href={item.href}
+            icon={item.icon}
+            name={item.name}
+            isActive={pathname === item.href}
+          />
+        ))}
       </nav>
       
       <div className="pt-6 mt-4">
@@ -65,9 +79,11 @@ const NavigationSidebar = () => {
         ) : user ? (
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center mb-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 flex items-center justify-center text-white font-medium mr-3">
-                {user.email?.charAt(0).toUpperCase()}
-              </div>
+              <UserAvatar 
+                text={user.email?.charAt(0) || "U"}
+                size="lg"
+                className="mr-3"
+              />
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium text-gray-800 truncate">
                   {user.email}
