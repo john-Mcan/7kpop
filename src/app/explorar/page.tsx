@@ -9,80 +9,110 @@ import Link from "next/link";
 
 export default function ExplorePage() {
   // Datos de ejemplo para resultados de búsqueda
-  const recentSearches = ["BTS", "NewJeans", "Stray Kids", "Red Velvet", "TWICE"];
+  const recentSearches = ["Marvel", "Taylor Swift", "Anime", "Gaming", "Star Wars"];
   
   const trendingSearches = [
-    "Jimin", "Aespa comeback", "BLACKPINK tour", "Lisa solo", "HYBE 2024"
+    "The Witcher", "Breaking Bad", "Harry Potter", "FIFA", "Game of Thrones"
   ];
   
   const searchResults = {
     posts: [
       {
         id: "post1",
-        title: "Análisis del último comeback de NewJeans",
-        author: "kpoplover23",
+        title: "Análisis del último álbum: The GOAT",
+        author: "musicfan23",
         date: "Hace 2 horas",
         likes: 342,
         comments: 78,
-        tags: ["NewJeans", "Comeback", "Análisis"]
+        tags: ["Música", "Análisis", "Swifties"]
       },
       {
         id: "post2",
-        title: "Teorías sobre el próximo álbum de BTS",
-        author: "army_forever",
+        title: "Teorías sobre la próxima película de Marvel",
+        author: "marvel_fan",
         date: "Hace 5 horas",
         likes: 567,
         comments: 124,
-        tags: ["BTS", "Comeback", "Teorías"]
+        tags: ["Marvel", "Cine", "Teorías"]
       },
       {
         id: "post3",
-        title: "Ranking: Las mejores coreografías de 2024",
-        author: "dance_expert",
+        title: "Ranking: Los mejores videojuegos de 2024",
+        author: "game_expert",
         date: "Hace 1 día",
         likes: 890,
         comments: 213,
-        tags: ["Coreografía", "Ranking", "2024"]
+        tags: ["Videojuegos", "Ranking", "2024"]
       },
     ],
     usuarios: [
       {
         id: "user1",
-        username: "jisoo_fan",
+        username: "taylor_fan",
         name: "María López",
         followers: 1243,
-        fandoms: ["BLACKPINK", "Red Velvet"]
+        fandoms: ["Taylor Swift", "Series Netflix"]
       },
       {
         id: "user2",
-        username: "kpop_news",
-        name: "Noticias K-pop",
+        username: "noticias_cine",
+        name: "Noticias Cine",
         followers: 5689,
-        fandoms: ["Múltiples"]
+        fandoms: ["Marvel", "Star Wars"]
       },
       {
         id: "user3",
-        username: "bangchan_skz",
+        username: "anime_lover",
         name: "Carlos Mendoza",
         followers: 842,
-        fandoms: ["Stray Kids", "ATEEZ"]
+        fandoms: ["Anime", "Manga"]
       },
     ],
     eventos: [
       {
         id: "event1",
-        title: "TWICE World Tour 2024 - Ciudad de México",
+        title: "The Eras Tour - Taylor Swift en México",
         date: "15 de octubre, 2024",
-        location: "Arena Ciudad de México",
-        attendees: 1250
+        location: "Estadio GNP, Ciudad de México",
+        attendees: 65000
       },
       {
         id: "event2",
-        title: "K-pop Convention LATAM",
+        title: "Comic-Con Latinoamérica 2024",
         date: "3-5 de septiembre, 2024",
         location: "Centro de Convenciones, Buenos Aires",
-        attendees: 3400
+        attendees: 34000
       },
+      {
+        id: "event3",
+        title: "Lanzamiento: FIFA 25",
+        date: "27 de septiembre, 2024",
+        location: "Evento global",
+        attendees: 12500
+      },
+    ],
+    fandoms: [
+      {
+        id: "fandom1",
+        name: "Marvel",
+        category: "películas",
+        members: 15430,
+        posts: 8792
+      },
+      {
+        id: "fandom2",
+        name: "Taylor Swift",
+        category: "música",
+        members: 22567,
+        posts: 12453
+      },
+      {
+        id: "fandom3",
+        name: "Game of Thrones",
+        category: "series",
+        members: 9876,
+        posts: 5421
+      }
     ]
   };
 
@@ -98,14 +128,14 @@ export default function ExplorePage() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent">
-                  Explorar 7Kpop
+                  Explorar fanverse
                 </h1>
               </div>
               
               <div className="relative w-full mt-[0.55rem]">
                 <input 
                   type="search" 
-                  placeholder="Buscar 7kpop..." 
+                  placeholder="Buscar fanverse..." 
                   className="w-full py-2 px-4 pr-10 rounded-full border border-gray-200 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -200,6 +230,33 @@ export default function ExplorePage() {
                                     {tag}
                                   </Badge>
                                 ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      <h2 className="text-lg font-medium mt-8">Fandoms destacados</h2>
+                      <div className="space-y-3">
+                        {searchResults.fandoms.map(fandom => (
+                          <Card key={fandom.id} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Link href={`/fandoms/${fandom.name.toLowerCase().replace(' ', '-')}`} className="text-md font-medium hover:text-purple-600 transition-colors">
+                                    {fandom.name}
+                                  </Link>
+                                  <div className="text-xs text-gray-500 mt-1 capitalize">
+                                    Categoría: {fandom.category}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    <span className="font-medium">{fandom.members.toLocaleString()}</span> miembros • 
+                                    <span className="font-medium"> {fandom.posts.toLocaleString()}</span> posts
+                                  </div>
+                                </div>
+                                <Button variant="outline" size="sm" className="rounded-full text-sm text-purple-600 border-purple-200 hover:bg-purple-50">
+                                  Seguir
+                                </Button>
                               </div>
                             </CardContent>
                           </Card>
@@ -310,7 +367,7 @@ export default function ExplorePage() {
                                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                               </svg>
-                              <span>{event.attendees} asistentes</span>
+                              <span>{event.attendees.toLocaleString()} asistentes</span>
                             </div>
                             <div className="mt-3">
                               <Button size="sm" className="rounded-full bg-purple-600 text-white hover:bg-purple-700">
@@ -324,15 +381,37 @@ export default function ExplorePage() {
                   </TabsContent>
                   
                   <TabsContent value="fandoms">
-                    <div className="flex flex-col gap-4">
-                      <p className="text-gray-500">
-                        ¿Buscas fandoms? Visita la sección de <Link href="/fandoms" className="text-purple-600 hover:underline">fandoms</Link> para explorar las comunidades de K-pop.
-                      </p>
-                      <Button asChild variant="outline" className="w-fit">
-                        <Link href="/fandoms">
-                          Ir a Fandoms
-                        </Link>
-                      </Button>
+                    <div className="space-y-3">
+                      {searchResults.fandoms.map(fandom => (
+                        <Card key={fandom.id} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <Link href={`/fandoms/${fandom.name.toLowerCase().replace(' ', '-')}`} className="text-md font-medium hover:text-purple-600 transition-colors">
+                                  {fandom.name}
+                                </Link>
+                                <div className="text-xs text-gray-500 mt-1 capitalize">
+                                  Categoría: {fandom.category}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  <span className="font-medium">{fandom.members.toLocaleString()}</span> miembros • 
+                                  <span className="font-medium"> {fandom.posts.toLocaleString()}</span> posts
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm" className="rounded-full text-sm text-purple-600 border-purple-200 hover:bg-purple-50">
+                                Seguir
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      <div className="mt-4">
+                        <Button asChild variant="outline" className="w-fit">
+                          <Link href="/fandoms">
+                            Ver todos los fandoms
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>

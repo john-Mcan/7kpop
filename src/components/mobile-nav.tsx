@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Home, Search, Vote, Users, User, LogIn } from "lucide-react";
+import { Home, Search, MessageSquare, Users, User, LogIn } from "lucide-react";
 import { useAuth } from "@/lib/supabase/auth-context";
 
 const MobileNav = () => {
@@ -14,8 +14,8 @@ const MobileNav = () => {
   const navItems = [
     { name: "Inicio", href: "/", icon: Home },
     { name: "Explorar", href: "/explorar", icon: Search },
-    { name: "Votaciones", href: "/votaciones", icon: Vote },
     { name: "Fandoms", href: "/fandoms", icon: Users },
+    { name: "Mensajes", href: "/mensajes", icon: MessageSquare },
     { name: "Perfil", href: "/perfil", icon: User },
   ];
 

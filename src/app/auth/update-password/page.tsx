@@ -65,8 +65,8 @@ export default function UpdatePasswordPage() {
       {/* Panel lateral decorativo - visible solo en pantallas md y mayores */}
       <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex-col justify-center items-center p-12">
         <div className="max-w-md text-center">
-          <h1 className="text-5xl font-bold mb-6">7Kpop</h1>
-          <p className="text-xl mb-8">La comunidad para fans de Kpop en América Latina</p>
+          <h1 className="text-5xl font-bold mb-6">fanverse</h1>
+          <p className="text-xl mb-8">La comunidad para fans en América Latina</p>
           <div className="bg-white/10 p-6 rounded-2xl backdrop-blur-sm shadow-lg border border-white/20">
             <p className="italic">
               "Conecta con fans, participa en votaciones, comparte tus opiniones y mantente al día con todo lo relacionado con tus artistas favoritos."
@@ -77,13 +77,13 @@ export default function UpdatePasswordPage() {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span>Comunidades para cada grupo</span>
+              <span>Comunidades para todos tus intereses</span>
             </div>
             <div className="flex items-center space-x-2 opacity-90">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span>Votaciones semanales y mensuales</span>
+              <span>Participa en discusiones y eventos</span>
             </div>
             <div className="flex items-center space-x-2 opacity-90">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -102,7 +102,7 @@ export default function UpdatePasswordPage() {
           {/* Logo para móviles - visible solo en pantallas pequeñas */}
           <div className="md:hidden text-center mb-10">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent">
-              7Kpop
+              fanverse
             </h1>
           </div>
 
@@ -200,7 +200,7 @@ export default function UpdatePasswordPage() {
         
         <div className="w-full mt-6 text-center">
           <p className="text-sm text-gray-500">
-            © 2024 7Kpop. Todos los derechos reservados.
+            © 2024 fanverse. Todos los derechos reservados.
           </p>
         </div>
       </div>

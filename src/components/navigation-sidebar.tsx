@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Home, Search, Vote, Users, User, LogOut } from "lucide-react";
+import { Home, Search, MessageSquare, Users, User, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import UserAvatar from "./ui/user-avatar";
 
@@ -37,8 +37,8 @@ const NavigationSidebar = () => {
   const navItems = [
     { name: "Inicio", href: "/", icon: Home },
     { name: "Explorar", href: "/explorar", icon: Search },
-    { name: "Votaciones", href: "/votaciones", icon: Vote },
     { name: "Fandoms", href: "/fandoms", icon: Users },
+    { name: "Mensajes", href: "/mensajes", icon: MessageSquare },
     { name: "Perfil", href: "/perfil", icon: User },
   ];
 
@@ -55,7 +55,7 @@ const NavigationSidebar = () => {
     <div className="h-full w-64 bg-gray-50 p-6 hidden md:flex flex-col">
       <div className="mb-8 px-4">
         <Link href="/" className="flex items-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent">7Kpop</h1>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent">fanverse</h1>
         </Link>
       </div>
       

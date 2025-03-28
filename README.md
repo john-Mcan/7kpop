@@ -1,14 +1,14 @@
-# 7Kpop - Comunidad para fans de Kpop en América Latina
+# fanverse - Comunidad para fans en América Latina
 
-7Kpop es una plataforma moderna y dinámica diseñada para conectar a fans de Kpop en América Latina. Este proyecto está inspirado en la interfaz de OnlyFans con un diseño limpio al estilo Apple, adaptado con los colores y la energía de la cultura Kpop.
+fanverse es una plataforma moderna y dinámica diseñada para conectar a fans de diferentes comunidades en América Latina. Este proyecto está inspirado en la interfaz de OnlyFans con un diseño limpio al estilo Apple, adaptado para celebrar la diversidad de la cultura de fandoms.
 
 ## Características principales
 
 - **Sistema de usuarios**: Registro, inicio de sesión y perfiles personalizados
-- **Estructura por fandoms**: Comunidades dedicadas a diferentes grupos de Kpop
+- **Estructura por fandoms**: Comunidades dedicadas a diferentes grupos, series, películas y más
 - **Sistema de publicaciones**: Creación de posts con texto, imágenes y videos
 - **Comentarios y votos**: Interacciones con el contenido y otros usuarios
-- **Encuestas semanales/mensuales**: Votaciones para elegir grupos y canciones favoritas
+- **Sistema de mensajes y notificaciones**: Comunicación entre usuarios y alertas sobre actividad relevante
 - **Diseño responsivo**: Experiencia optimizada para dispositivos móviles y de escritorio
 
 ## Tecnologías utilizadas
@@ -33,23 +33,25 @@ El proyecto tiene implementado:
   - Página principal (Home)
   - Explorar (estructura inicial)
   - Perfil (estructura inicial)
-  - Votaciones (estructura inicial)
+  - Mensajes y notificaciones
   - Fandoms (listado de comunidades disponibles)
   - Mis Fandoms (fandoms seguidos y recomendados)
   - Detalle de Fandom (perfil completo con publicaciones)
 - **Sistema de Fandoms**:
   - Exploración de comunidades
   - Estructura de datos para fandoms
+  - Categorización de fandoms
   - Perfil detallado de cada fandom
   - Vista de publicaciones específicas de un fandom
+  - Componente mejorado para crear publicaciones
 - **Diseño responsivo**: Adaptación para móviles y escritorio
 
 ## Cómo ejecutar localmente
 
 1. Clona este repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/7kpop.git
-   cd 7kpop
+   git clone https://github.com/tu-usuario/fanverse.git
+   cd fanverse
    ```
 
 2. Instala las dependencias:
@@ -67,14 +69,14 @@ El proyecto tiene implementado:
 ## Estructura del proyecto
 
 ```
-7kpop/
+fanverse/
 ├── src/
 │   ├── app/                 # Rutas y páginas (App Router de Next.js)
 │   │   ├── page.tsx         # Página principal
 │   │   ├── layout.tsx       # Layout principal
 │   │   ├── explorar/        # Ruta de exploración
 │   │   ├── perfil/          # Ruta de perfil de usuario
-│   │   ├── votaciones/      # Ruta de votaciones
+│   │   ├── mensajes/        # Sistema de mensajes y notificaciones
 │   │   ├── fandoms/         # Listado de fandoms disponibles
 │   │   │   └── [id]/        # Detalle de fandom específico
 │   │   └── mis-fandoms/     # Fandoms seguidos por el usuario
@@ -104,17 +106,11 @@ El proyecto tiene implementado:
 11. ⏳ Desarrollar sistema de hashtags para categorización de contenido y mejora de descubrimiento
 12. ⏳ Optimización de rendimiento y SEO
 13. ✅ Configuración de seguridad y privacidad
-    - Autenticación segura
-    - Protección contra ataques comunes
-    - Encriptación de datos sensibles
 14. ⏳ Implementar accesibilidad (WCAG)
 15. ⏳ Crear documentación legal
-    - Términos y condiciones
-    - Política de privacidad
-    - Política de cookies
 16. ⏳ Despliegue en plataforma de hosting (Vercel)
 17. ⏳ Configuración de dominio personalizado
-18. ⏳ Implementar pruebas automatizadas (unitarias, integración y end-to-end)
+18. ⏳ Implementar pruebas automatizadas
 19. ⏳ Crear documentación para desarrolladores
 20. ⏳ Implementación de analíticas para seguimiento de métricas
 21. ⏳ Pruebas de usabilidad con usuarios reales
@@ -124,6 +120,11 @@ El proyecto tiene implementado:
 25. ⏳ Estrategia de monetización (si aplica)
 26. ⏳ Preparación para lanzamiento oficial (beta)
 
+### Tareas pendientes inmediatas
+1. ⏳ Refinar la página de mensajes/notificaciones
+2. ⏳ Implementar vista de links de cualquier tipo en crear post de fandoms
+3. ⏳ Revisar si Supabase está preparado para manejar mensajes y notificaciones
+
 ### Estado de la implementación de Supabase
 
 Ya se ha configurado Supabase como backend para la aplicación, incluyendo:
@@ -131,18 +132,21 @@ Ya se ha configurado Supabase como backend para la aplicación, incluyendo:
 - **Autenticación**: Sistema completo con registro, inicio de sesión y protección de rutas
 - **Base de datos**: Esquema completo con tablas para:
   - Perfiles de usuario con sistema de roles (usuario/admin)
-  - Fandoms y sistema de moderación
+  - Fandoms con categorización y sistema de moderación
   - Publicaciones, comentarios, votos y reacciones
   - Sistema de notificaciones y mensajería
-  - Votaciones y encuestas
 - **Seguridad**: Políticas de Row Level Security (RLS) configuradas para todas las tablas
 - **Middlewares**: Configuración para gestión de sesiones y autenticación
 
 Ver archivo `SUPABASE.md` para la documentación completa sobre la configuración de Supabase.
 
-## Pendiente para próximas fases
+## Cambios recientes
 
-El próximo paso principal es la integración de los componentes existentes con Supabase para reemplazar los datos estáticos por datos reales de la base de datos, implementando las operaciones CRUD necesarias.
+### Última actualización (Marzo 28, 2023)
+- Cambio del branding de 7Kpop a fanverse
+- Implementación de base de datos para categorización de fandoms
+- Eliminación de la página de votaciones y creación de la página de mensajes/notificaciones
+- Actualización del componente de creación de posts en las páginas de detalle de fandoms y de perfil
 
 ## Licencia
 

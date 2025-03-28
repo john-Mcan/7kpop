@@ -1,12 +1,12 @@
-# Configuración de Supabase para 7Kpop
+# Configuración de Supabase para fanverse
 
-Este documento detalla el proceso para configurar Supabase como backend para la autenticación y base de datos de la aplicación 7Kpop.
+Este documento detalla el proceso para configurar Supabase como backend para la autenticación y base de datos de la aplicación fanverse.
 
 ## 1. Crear un proyecto en Supabase
 
 1. Ve a [database.new](https://database.new) o [app.supabase.com](https://app.supabase.com) y crea una cuenta o inicia sesión
 2. Haz clic en "New Project"
-3. Asigna un nombre al proyecto (por ejemplo, "7kpop")
+3. Asigna un nombre al proyecto (por ejemplo, "fanverse")
 4. Establece una contraseña segura para la base de datos
 5. Selecciona una región cercana a tus usuarios objetivo
 6. Haz clic en "Create new project"
@@ -909,3 +909,75 @@ La única consideración adicional es que para la integración real con Supabase
 2. Al cargar comentarios, la estructura de árbol debe construirse adecuadamente a partir de los datos planos de Supabase
 
 Esto requerirá un procesamiento adicional en el cliente para transformar la estructura plana devuelta por Supabase en una estructura jerárquica de comentarios y respuestas para mostrar correctamente en la interfaz de usuario. 
+
+## Actualización: Soporte para categorías de fandoms
+
+Para agregar soporte para categorías de fandoms en Supabase, es necesario ejecutar las siguientes sentencias SQL:
+
+### 1. Agregar campo categoría a la tabla fandoms
+
+```sql
+-- Agregar campo category a la tabla de fandoms
+ALTER TABLE public.fandoms 
+ADD COLUMN category TEXT;
+```
+
+### 2. Crear tabla para las categorías de fandoms
+
+```sql
+-- Crear tabla para categorías de fandoms
+CREATE TABLE IF NOT EXISTS public.fandom_categories (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Habilitar RLS en la tabla
+ALTER TABLE public.fandom_categories ENABLE ROW LEVEL SECURITY;
+
+-- Crear políticas RLS
+-- Todos pueden ver las categorías
+CREATE POLICY "Categorías visibles para todos" ON public.fandom_categories
+  FOR SELECT USING (true);
+
+-- Solo administradores pueden crear/editar/eliminar categorías
+CREATE POLICY "Solo administradores pueden administrar categorías" ON public.fandom_categories
+  FOR INSERT WITH CHECK (public.is_admin());
+
+CREATE POLICY "Solo administradores pueden actualizar categorías" ON public.fandom_categories
+  FOR UPDATE USING (public.is_admin());
+
+CREATE POLICY "Solo administradores pueden eliminar categorías" ON public.fandom_categories
+  FOR DELETE USING (public.is_admin());
+```
+
+### 3. Agregar campo categoría a las solicitudes de fandoms
+
+```sql
+-- Agregar campo category a la tabla de solicitudes de fandoms
+ALTER TABLE public.fandom_requests 
+ADD COLUMN category TEXT;
+```
+
+### 4. Insertar categorías iniciales
+
+```sql
+-- Insertar categorías iniciales
+INSERT INTO public.fandom_categories (name, slug) VALUES
+  ('Música', 'música'),
+  ('Series', 'series'),
+  ('Películas', 'películas'),
+  ('Videojuegos', 'videojuegos'),
+  ('Libros', 'libros');
+```
+
+### 5. Crear índice para mejora de rendimiento en búsquedas por categoría
+
+```sql
+-- Crear índice para optimizar búsquedas por categoría
+CREATE INDEX idx_fandoms_category ON public.fandoms(category);
+```
+
+Las categorías son una parte fundamental del sistema de fandoms, permitiendo a los usuarios filtrar y encontrar comunidades específicas según sus intereses. Al implementar estas categorías en la base de datos, se mejora tanto la experiencia de usuario como la organización del contenido. 

@@ -1,3 +1,7 @@
+"use client";
+
+import { useState, useEffect, SyntheticEvent, useRef, ChangeEvent } from "react";
+import { useParams } from "next/navigation";
 import NavigationSidebar from "@/components/navigation-sidebar";
 import TrendingSidebar from "@/components/trending-sidebar";
 import MobileNav from "@/components/mobile-nav";
@@ -8,7 +12,7 @@ import { FandomAvatar } from "@/components/ui/fandom-avatar";
 import { FandomBanner } from "@/components/ui/fandom-banner";
 import { getFandomBySlug, getFandomById } from "@/lib/data/fandoms";
 import Link from "next/link";
-import { Image, Video, MapPin } from "lucide-react";
+import { Image, Video, MapPin, X } from "lucide-react";
 
 interface FandomPageProps {
   params: {
@@ -36,45 +40,163 @@ export default function FandomPage({ params }: FandomPageProps) {
     fandomInfo = {
       id: 0,
       name: `Fandom ${slug}`,
-      slug: slug
+      slug: slug,
+      category: "general"
     };
   }
+
+  // Estado para gestionar la pestaña activa
+  const [activeTab, setActiveTab] = useState("publicaciones");
 
   // Datos de ejemplo para un fandom específico
   const fandomData = {
     id: fandomInfo.id,
     nombre: fandomInfo.name,
     slug: fandomInfo.slug,
-    descripcion: "Comunidad oficial en 7Kpop dedicada a los fans de este increíble grupo. Comparte tus pensamientos, fotos, videos y conecta con otros fans.",
+    categoria: fandomInfo.category || "general",
+    descripcion: "Comunidad oficial en fanverse dedicada a los fans de esta comunidad. Comparte tus pensamientos, fotos, videos y conecta con otros fans.",
     miembros: 15600,
     posts: 4325,
     creacion: "Enero 2023",
     inicial: fandomInfo.name.charAt(0),
-    administradores: [
-      { id: 1, nombre: "María González", username: "mariakpop" },
-      { id: 2, nombre: "Carlos Sánchez", username: "carlosk" }
-    ],
     moderadores: [
-      { id: 3, nombre: "Ana López", username: "analopez" },
-      { id: 4, nombre: "Roberto Díaz", username: "robertokpop" }
+      { id: 1, nombre: "María González", username: "maria_fans" },
+      { id: 2, nombre: "Carlos Sánchez", username: "carlosmusic" },
+      { id: 3, nombre: "Ana López", username: "ana_anime" },
+      { id: 4, nombre: "Roberto Díaz", username: "roberto_fan" }
     ],
     reglas: [
       "Respeta a todos los miembros del fandom",
       "No compartas contenido inapropiado",
       "Evita discusiones tóxicas entre fandoms",
       "Usa etiquetas adecuadas para tus publicaciones",
-      "Las publicaciones deben estar relacionadas al grupo"
+      "Las publicaciones deben estar relacionadas a este fandom"
     ]
   };
   
   // Pestañas del fandom
   const tabs = [
-    { id: 1, nombre: "Publicaciones", activo: true },
-    { id: 2, nombre: "Multimedia", activo: false },
-    { id: 3, nombre: "Eventos", activo: false },
-    { id: 4, nombre: "Miembros", activo: false },
-    { id: 5, nombre: "Acerca de", activo: false }
+    { id: 1, nombre: "Publicaciones", valor: "publicaciones", activo: activeTab === "publicaciones" },
+    { id: 2, nombre: "Multimedia", valor: "multimedia", activo: activeTab === "multimedia" },
+    { id: 3, nombre: "Eventos", valor: "eventos", activo: activeTab === "eventos" },
+    { id: 4, nombre: "Miembros", valor: "miembros", activo: activeTab === "miembros" },
+    { id: 5, nombre: "Acerca de", valor: "acerca", activo: activeTab === "acerca" }
   ];
+
+  // Manejador para cambiar pestañas
+  const handleTabChange = (tabValue: string) => {
+    setActiveTab(tabValue);
+  };
+
+  // Estado para el texto del post
+  const [postText, setPostText] = useState("");
+
+  // Estado para el título del post
+  const [postTitle, setPostTitle] = useState("");
+  
+  // Estado para las imágenes
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+
+  // Estado para el video
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+
+  // Estado para la ubicación
+  const [location, setLocation] = useState("");
+
+  // Estado para mostrar el input de ubicación
+  const [showLocationInput, setShowLocationInput] = useState(false);
+  
+  // Estado para mostrar el formulario de creación de post
+  const [showPostForm, setShowPostForm] = useState(false);
+
+  // Referencias para los inputs de archivo
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Función para manejar el cambio en el texto del post
+  const handlePostTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setPostText(e.target.value);
+  };
+
+  // Función para manejar el cambio en el título del post
+  const handlePostTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setPostTitle(e.target.value);
+  };
+
+  // Función para manejar el cambio en las imágenes
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setImageFiles(files);
+    }
+  };
+
+  // Función para manejar el cambio en el video
+  const handleVideoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setVideoFile(file);
+    }
+  };
+
+  // Función para manejar la eliminación de una imagen
+  const handleRemoveImage = (index: number) => {
+    const newImages = imageFiles.filter((_, i) => i !== index);
+    setImageFiles(newImages);
+  };
+
+  // Función para manejar la eliminación del video
+  const handleRemoveVideo = () => {
+    setVideoFile(null);
+  };
+
+  // Función para manejar el clic en el botón de imagen
+  const handleImageClick = () => {
+    imageInputRef.current?.click();
+  };
+
+  // Función para manejar el clic en el botón de video
+  const handleVideoClick = () => {
+    videoInputRef.current?.click();
+  };
+
+  // Función para manejar el clic en el botón de ubicación
+  const handleLocationClick = () => {
+    setShowLocationInput(!showLocationInput);
+    if (!showLocationInput) {
+      // Si tenemos acceso a la API de geolocalización, podríamos usarla aquí
+      // navigator.geolocation.getCurrentPosition(...)
+    }
+  };
+
+  // Función para manejar el cambio en la ubicación
+  const handleLocationChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setLocation(e.target.value);
+  };
+
+  // Función para manejar la publicación del post
+  const handlePublish = () => {
+    // Implementa la lógica para publicar el post aquí
+    console.log("Publicando post:", {
+      title: postTitle,
+      text: postText,
+      images: imageFiles,
+      video: videoFile,
+      location: location
+    });
+    
+    // Reiniciar el formulario
+    setPostTitle("");
+    setPostText("");
+    setImageFiles([]);
+    setVideoFile(null);
+    setLocation("");
+    setShowLocationInput(false);
+    setShowPostForm(false);
+  };
+
+  // Función para determinar si se puede publicar el post
+  const canPublish = postTitle.trim() !== "" && (postText.trim() !== "" || imageFiles.length > 0 || videoFile || location.trim() !== "");
 
   return (
     <>
@@ -159,6 +281,12 @@ export default function FandomPage({ params }: FandomPageProps) {
                       </svg>
                       Creado en {fandomData.creacion}
                     </div>
+                    <div className="flex items-center bg-white/90 px-2 py-1 rounded-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 text-purple-400">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                      </svg>
+                      Categoría: <span className="capitalize">{fandomData.categoria}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -189,6 +317,12 @@ export default function FandomPage({ params }: FandomPageProps) {
                       </svg>
                       Creado en {fandomData.creacion}
                     </div>
+                    <div className="flex items-center bg-white/70 px-2 py-1 rounded-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 text-purple-400">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                      </svg>
+                      <span className="capitalize">{fandomData.categoria}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -212,6 +346,7 @@ export default function FandomPage({ params }: FandomPageProps) {
                         ? "border-purple-600 text-purple-600"
                         : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
                     }`}
+                    onClick={() => handleTabChange(tab.valor)}
                   >
                     {tab.nombre}
                   </button>
@@ -219,54 +354,387 @@ export default function FandomPage({ params }: FandomPageProps) {
               </div>
             </div>
             
-            {/* Sección para crear nueva publicación */}
-            <Card className="bg-white border border-gray-100 shadow-sm mb-6 overflow-hidden">
-              <div className="p-4 sm:p-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                    <FandomAvatar
-                      alt={fandomData.nombre}
-                      initial={fandomData.inicial}
-                      colorClass="from-purple-600 to-indigo-600"
-                    />
+            {/* Contenido según la pestaña seleccionada */}
+            {activeTab === "publicaciones" && (
+              <>
+                {/* Sección para crear nueva publicación */}
+                <Card className="bg-white border border-gray-100 shadow-sm mb-6 overflow-hidden">
+                  <div className="p-4 sm:p-5">
+                    {!showPostForm ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                          <FandomAvatar
+                            alt={fandomData.nombre}
+                            initial={fandomData.inicial}
+                            colorClass="from-purple-600 to-indigo-600"
+                          />
+                        </div>
+                        <div 
+                          onClick={() => setShowPostForm(true)}
+                          className="flex-1 bg-gray-50 py-3 px-4 rounded-xl border border-gray-200 text-gray-500 text-sm cursor-pointer hover:bg-gray-100 hover:border-gray-300 transition-colors"
+                        >
+                          ¿Qué quieres compartir con este fandom?
+                        </div>
+                        <Button 
+                          onClick={() => setShowPostForm(true)}
+                          className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-medium shadow-sm hover:shadow hover:opacity-90 transition-all"
+                        >
+                          Crear post
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-medium text-gray-800">Crear nueva publicación</h3>
+                          <button 
+                            onClick={() => setShowPostForm(false)} 
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 mt-1">
+                            <FandomAvatar
+                              alt={fandomData.nombre}
+                              initial={fandomData.inicial}
+                              colorClass="from-purple-600 to-indigo-600"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            {/* Campo para el título del post */}
+                            <div className="relative mb-2">
+                              <input
+                                type="text"
+                                placeholder="Título de la publicación"
+                                className="w-full py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all placeholder:text-gray-500"
+                                value={postTitle}
+                                onChange={handlePostTitleChange}
+                              />
+                            </div>
+                            {/* Campo para el contenido del post */}
+                            <div className="relative">
+                              <textarea
+                                placeholder={`¿Qué está pasando en ${fandomData.nombre}?`}
+                                className="w-full py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all placeholder:text-gray-500 min-h-[120px] resize-y"
+                                value={postText}
+                                onChange={handlePostTextChange}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Previsualización de imágenes */}
+                        {imageFiles.length > 0 && (
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            {imageFiles.map((file, index) => (
+                              <div key={index} className="relative">
+                                <img 
+                                  src={URL.createObjectURL(file)} 
+                                  alt={`Imagen ${index + 1}`} 
+                                  className="w-full h-32 object-cover rounded-lg"
+                                />
+                                <button 
+                                  className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full"
+                                  onClick={() => handleRemoveImage(index)}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Previsualización de video */}
+                        {videoFile && (
+                          <div className="mt-3 relative">
+                            <video 
+                              src={URL.createObjectURL(videoFile)} 
+                              controls 
+                              className="w-full rounded-lg"
+                            />
+                            <button 
+                              className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full"
+                              onClick={handleRemoveVideo}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* Input de ubicación */}
+                        {showLocationInput && (
+                          <div className="mt-3">
+                            <input
+                              type="text"
+                              placeholder="Agregar ubicación..."
+                              className="w-full py-2 px-3 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-purple-200 focus:border-purple-400 transition-all"
+                              value={location}
+                              onChange={handleLocationChange}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Inputs ocultos para archivos */}
+                        <input 
+                          type="file" 
+                          ref={imageInputRef} 
+                          className="hidden" 
+                          accept="image/*" 
+                          multiple 
+                          onChange={handleImageChange}
+                        />
+                        <input 
+                          type="file" 
+                          ref={videoInputRef} 
+                          className="hidden" 
+                          accept="video/*" 
+                          onChange={handleVideoChange}
+                        />
+                        
+                        <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+                          <div className="flex gap-2">
+                            <button 
+                              className={`p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5 ${videoFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onClick={handleImageClick}
+                              disabled={!!videoFile}
+                            >
+                              <Image size={18} />
+                              <span className="text-xs font-medium hidden sm:inline">Imagen</span>
+                            </button>
+                            <button 
+                              className={`p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5 ${imageFiles.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onClick={handleVideoClick}
+                              disabled={imageFiles.length > 0}
+                            >
+                              <Video size={18} />
+                              <span className="text-xs font-medium hidden sm:inline">Video</span>
+                            </button>
+                            <button 
+                              className={`p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5 ${showLocationInput ? 'text-purple-600 bg-purple-50' : ''}`}
+                              onClick={handleLocationClick}
+                            >
+                              <MapPin size={18} />
+                              <span className="text-xs font-medium hidden sm:inline">Ubicación</span>
+                            </button>
+                          </div>
+                          <Button 
+                            className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-medium shadow-sm hover:shadow hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={handlePublish}
+                            disabled={!canPublish}
+                          >
+                            Publicar
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder={`¿Qué está pasando en ${fandomData.nombre}?`}
-                        className="w-full py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all placeholder:text-gray-500"
+                </Card>
+                
+                {/* Feed de publicaciones */}
+                <div className="mb-6">
+                  <PostFeed fandomSlug={slug} />
+                </div>
+              </>
+            )}
+            
+            {activeTab === "multimedia" && (
+              <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-5 mb-6">
+                <h2 className="text-lg font-semibold mb-4">Fotos y videos compartidos</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} className="aspect-square rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition-opacity">
+                      <img 
+                        src={`https://picsum.photos/seed/${fandomData.slug}${i}/300/300`} 
+                        alt={`Imagen ${i + 1}`} 
+                        className="w-full h-full object-cover"
                       />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 text-center">
+                  <Button variant="outline" className="rounded-full text-sm">
+                    Ver más
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {activeTab === "eventos" && (
+              <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-5 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Próximos eventos</h2>
+                  <Button variant="outline" size="sm" className="rounded-full text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                      <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Proponer evento
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="border border-gray-200 rounded-lg p-4 hover:border-purple-200 transition-colors">
+                    <h3 className="font-medium">Lanzamiento nuevo álbum/película/capítulo</h3>
+                    <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      15 de octubre, 2024
+                    </div>
+                    <div className="mt-1 flex items-center text-sm text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                      </svg>
+                      Evento online
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" className="rounded-full bg-purple-600 text-white">
+                        Interesado
+                      </Button>
+                      <Button variant="outline" size="sm" className="rounded-full">
+                        Compartir
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="border border-gray-200 rounded-lg p-4 hover:border-purple-200 transition-colors">
+                    <h3 className="font-medium">Meet & Greet Virtual</h3>
+                    <div className="mt-2 flex items-center text-sm text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      23 de noviembre, 2024
+                    </div>
+                    <div className="mt-1 flex items-center text-sm text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                      </svg>
+                      Zoom (link por confirmar)
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" className="rounded-full bg-purple-600 text-white">
+                        Interesado
+                      </Button>
+                      <Button variant="outline" size="sm" className="rounded-full">
+                        Compartir
+                      </Button>
                     </div>
                   </div>
                 </div>
                 
-                <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-                  <div className="flex gap-2">
-                    <button className="p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5">
-                      <Image size={18} />
-                      <span className="text-xs font-medium hidden sm:inline">Imagen</span>
-                    </button>
-                    <button className="p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5">
-                      <Video size={18} />
-                      <span className="text-xs font-medium hidden sm:inline">Video</span>
-                    </button>
-                    <button className="p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5">
-                      <MapPin size={18} />
-                      <span className="text-xs font-medium hidden sm:inline">Ubicación</span>
-                    </button>
-                  </div>
-                  <Button className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-medium shadow-sm hover:shadow hover:opacity-90 transition-all">
-                    Publicar
+                <div className="mt-4 text-center">
+                  <Button variant="outline" className="rounded-full text-sm">
+                    Ver todos los eventos
                   </Button>
                 </div>
               </div>
-            </Card>
+            )}
             
-            {/* Feed de publicaciones */}
-            <div className="mb-6">
-              <PostFeed />
-            </div>
+            {activeTab === "miembros" && (
+              <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-5 mb-6">
+                <h2 className="text-lg font-semibold mb-4">Miembros destacados</h2>
+                
+                <div className="divide-y divide-gray-100">
+                  {/* Moderadores */}
+                  <div className="pb-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Moderadores</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {fandomData.moderadores.map(mod => (
+                        <div key={mod.id} className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-lg font-semibold text-purple-600">
+                            {mod.nombre.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-medium">{mod.nombre}</div>
+                            <div className="text-xs text-gray-500">@{mod.username}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Otros miembros activos */}
+                  <div className="pt-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Miembros activos</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold text-purple-600">
+                            {String.fromCharCode(65 + i)}
+                          </div>
+                          <div className="overflow-hidden">
+                            <div className="font-medium text-sm truncate">Usuario {i + 1}</div>
+                            <div className="text-xs text-gray-500">@user{i + 1}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <Button variant="outline" className="rounded-full text-sm">
+                    Ver todos los miembros
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {activeTab === "acerca" && (
+              <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-5 mb-6">
+                <h2 className="text-lg font-semibold mb-4">Acerca de este fandom</h2>
+                
+                <p className="text-sm text-gray-600 mb-6">
+                  {fandomData.descripcion}
+                </p>
+                
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Reglas de la comunidad</h3>
+                  <ul className="space-y-2">
+                    {fandomData.reglas.map((regla, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500 mt-0.5 flex-shrink-0">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>{regla}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Estadísticas</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="text-xl font-semibold text-purple-600">{fandomData.miembros.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">Miembros</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="text-xl font-semibold text-purple-600">{fandomData.posts.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">Posts</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="text-xl font-semibold text-purple-600">24</div>
+                      <div className="text-xs text-gray-500">Eventos</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                      <div className="text-xl font-semibold text-purple-600">{fandomData.creacion}</div>
+                      <div className="text-xs text-gray-500">Creación</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </main>
 

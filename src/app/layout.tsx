@@ -7,8 +7,8 @@ import { AuthProvider } from "@/lib/supabase/auth-context";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "7Kpop - Para fans de Kpop en América Latina",
-  description: "Una plataforma para fans de Kpop en América Latina",
+  title: "fanverse - Para fans en América Latina",
+  description: "Una plataforma para fans y comunidades en América Latina",
 };
 
 export default function RootLayout({

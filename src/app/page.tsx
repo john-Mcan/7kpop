@@ -33,7 +33,7 @@ export default function Home() {
               <div className="relative w-full">
                 <input 
                   type="search" 
-                  placeholder="Buscar 7kpop..." 
+                  placeholder="Buscar fanverse..." 
                   className="w-full py-2 px-4 pr-10 rounded-full border border-gray-200 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">

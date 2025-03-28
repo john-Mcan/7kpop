@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { fandomsData } from "@/lib/data/fandoms";
+import { fandomsData, fandomCategories, getFandomsByCategory } from "@/lib/data/fandoms";
 
 export default function FandomsPage() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -20,16 +20,21 @@ export default function FandomsPage() {
     name: "",
     description: "",
     reason: "",
-    social: ""
+    social: "",
+    category: ""
   });
   const [formErrors, setFormErrors] = useState({
     name: false,
     description: false,
-    reason: false
+    reason: false,
+    category: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginAlert, setShowLoginAlert] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("todos");
+  const [filteredFandoms, setFilteredFandoms] = useState(fandomsData);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Simulación de verificación de login (en un caso real, esto vendría de un contexto de autenticación)
   useEffect(() => {
@@ -38,7 +43,22 @@ export default function FandomsPage() {
     setIsLoggedIn(false);
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // Filtrar fandoms cuando cambia la categoría activa o la búsqueda
+  useEffect(() => {
+    let results = getFandomsByCategory(activeCategory);
+    
+    // Aplicar filtro de búsqueda si existe
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      results = results.filter(fandom => 
+        fandom.name.toLowerCase().includes(query)
+      );
+    }
+    
+    setFilteredFandoms(results);
+  }, [activeCategory, searchQuery]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     const fieldName = id.replace('fandom-', '');
     
@@ -60,7 +80,8 @@ export default function FandomsPage() {
     const newErrors = {
       name: !formData.name.trim(),
       description: !formData.description.trim(),
-      reason: !formData.reason.trim()
+      reason: !formData.reason.trim(),
+      category: !formData.category.trim()
     };
     
     setFormErrors(newErrors);
@@ -86,7 +107,8 @@ export default function FandomsPage() {
           name: "",
           description: "",
           reason: "",
-          social: ""
+          social: "",
+          category: ""
         });
       }, 1000);
     }
@@ -100,26 +122,26 @@ export default function FandomsPage() {
     }
   };
 
-  // Usamos los datos del módulo centralizado
-  const fandoms = fandomsData.map(fandom => ({
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Usamos los datos del módulo centralizado con la información adicional
+  const fandoms = filteredFandoms.map(fandom => ({
     id: fandom.id,
     nombre: fandom.name,
     slug: fandom.slug,
-    descripcion: `Comunidad oficial de ${fandom.name} en 7Kpop`,
+    categoria: fandom.category,
+    descripcion: `Comunidad oficial de ${fandom.name} en fanverse`,
     miembros: Math.floor(Math.random() * 10000) + 5000, // Datos de ejemplo
     posts: Math.floor(Math.random() * 3000) + 1000, // Datos de ejemplo
     imagenColor: "from-purple-600 to-purple-400", // Esto podría mejorarse usando fandom-colors.ts
     inicial: fandom.name.charAt(0)
   }));
-
-  // Categorías de fandoms
-  const categorias = [
-    { id: 1, nombre: "Populares", activo: true },
-    { id: 2, nombre: "Recientes", activo: false },
-    { id: 3, nombre: "Boy Groups", activo: false },
-    { id: 4, nombre: "Girl Groups", activo: false },
-    { id: 5, nombre: "Solistas", activo: false }
-  ];
 
   return (
     <>
@@ -138,7 +160,7 @@ export default function FandomsPage() {
                 
                 <div className="dropdown relative">
                   <Button variant="outline" className="flex items-center justify-center gap-1 text-sm rounded-full bg-white border-gray-200 shadow-sm hover:bg-gray-50">
-                    <span>Populares</span>
+                    <span>Ordenar: Populares</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="m6 9 6 6 6-6"></path>
                     </svg>
@@ -150,6 +172,8 @@ export default function FandomsPage() {
                 <input 
                   type="search" 
                   placeholder="Buscar fandom..." 
+                  value={searchQuery}
+                  onChange={handleSearchChange}
                   className="w-full py-2 px-4 pr-10 rounded-full border border-gray-200 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -164,17 +188,18 @@ export default function FandomsPage() {
             {/* Categorías */}
             <div className="mt-6 pb-2 overflow-x-auto scrollbar-hide">
               <div className="flex space-x-2 min-w-max">
-                {categorias.map((categoria) => (
+                {fandomCategories.map((categoria) => (
                   <Button
                     key={categoria.id}
-                    variant={categoria.activo ? "default" : "outline"}
+                    variant={activeCategory === categoria.slug ? "default" : "outline"}
                     className={`rounded-full text-sm font-medium px-4 py-1 ${
-                      categoria.activo
+                      activeCategory === categoria.slug
                         ? "bg-gradient-to-r from-purple-600 to-indigo-500 text-white shadow-sm"
                         : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
                     }`}
+                    onClick={() => handleCategoryChange(categoria.slug)}
                   >
-                    {categoria.nombre}
+                    {categoria.name}
                   </Button>
                 ))}
               </div>
@@ -182,66 +207,77 @@ export default function FandomsPage() {
             
             {/* Grid de fandoms */}
             <div className="mt-6 grid grid-cols-1 gap-4">
-              {fandoms.map((fandom) => (
-                <Link key={fandom.id} href={`/fandoms/${fandom.slug}`} className="group">
-                  <Card className="bg-white border border-gray-100 shadow-sm group-hover:shadow-md group-hover:border-purple-100 transition-all overflow-hidden h-full">
-                    <div className="p-4 flex flex-col h-full">
-                      <div className="flex items-center gap-3 mb-3 justify-between">
-                        <div className="flex items-center gap-3">
-                          {/* Avatar del fandom */}
-                          <div className="w-12 h-12 shrink-0">
-                            <FandomAvatar 
-                              alt={fandom.nombre}
-                              initial={fandom.inicial}
-                            />
+              {fandoms.length > 0 ? (
+                fandoms.map((fandom) => (
+                  <Link key={fandom.id} href={`/fandoms/${fandom.slug}`} className="group">
+                    <Card className="bg-white border border-gray-100 shadow-sm group-hover:shadow-md group-hover:border-purple-100 transition-all overflow-hidden h-full">
+                      <div className="p-4 flex flex-col h-full">
+                        <div className="flex items-center gap-3 mb-3 justify-between">
+                          <div className="flex items-center gap-3">
+                            {/* Avatar del fandom */}
+                            <div className="w-12 h-12 shrink-0">
+                              <FandomAvatar 
+                                alt={fandom.nombre}
+                                initial={fandom.inicial}
+                              />
+                            </div>
+                            
+                            {/* Nombre del fandom */}
+                            <div>
+                              <h3 className="text-lg font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
+                                {fandom.nombre}
+                              </h3>
+                              <p className="text-xs text-gray-500 capitalize">
+                                {fandom.categoria}
+                              </p>
+                            </div>
                           </div>
                           
-                          {/* Nombre del fandom */}
-                          <h3 className="text-lg font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
-                            {fandom.nombre}
-                          </h3>
+                          {/* Botón de seguir */}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="rounded-full bg-white border-purple-200 text-purple-600 hover:bg-purple-50 transition-all"
+                          >
+                            Seguir
+                          </Button>
                         </div>
                         
-                        {/* Botón de seguir */}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="rounded-full bg-white border-purple-200 text-purple-600 hover:bg-purple-50 transition-all"
-                        >
-                          Seguir
-                        </Button>
-                      </div>
-                      
-                      {/* Descripción */}
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-shrink">
-                        {fandom.descripcion}
-                      </p>
-                      
-                      {/* Separador que empuja las estadísticas hacia abajo */}
-                      <div className="flex-grow"></div>
-                      
-                      {/* Estadísticas */}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 text-purple-500">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                          </svg>
-                          <span className="font-medium">{fandom.miembros.toLocaleString()}</span>
-                          <span>&nbsp;miembros</span>
-                        </div>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 text-purple-500">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                          </svg>
-                          <span className="font-medium">{fandom.posts.toLocaleString()}</span>
-                          <span>&nbsp;posts</span>
+                        {/* Descripción */}
+                        <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-shrink">
+                          {fandom.descripcion}
+                        </p>
+                        
+                        {/* Separador que empuja las estadísticas hacia abajo */}
+                        <div className="flex-grow"></div>
+                        
+                        {/* Estadísticas */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 text-purple-500">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                              <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <span className="font-medium">{fandom.miembros.toLocaleString()}</span>
+                            <span>&nbsp;miembros</span>
+                          </div>
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 text-purple-500">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span className="font-medium">{fandom.posts.toLocaleString()}</span>
+                            <span>&nbsp;posts</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+                    </Card>
+                  </Link>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-gray-500">No se encontraron fandoms con los criterios actuales.</p>
+                </div>
+              )}
             </div>
             
             {/* Botón para solicitar nuevo fandom */}
@@ -302,20 +338,41 @@ export default function FandomsPage() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent">Solicitar nuevo fandom</DialogTitle>
             <DialogDescription>
-              Envía tu solicitud para crear un nuevo fandom en 7Kpop. Revisaremos tu solicitud y te notificaremos cuando sea aprobada.
+              Envía tu solicitud para crear un nuevo fandom en fanverse. Revisaremos tu solicitud y te notificaremos cuando sea aprobada.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="fandom-name">Nombre del grupo/artista *</Label>
+              <Label htmlFor="fandom-name">Nombre del fandom *</Label>
               <Input 
                 id="fandom-name" 
-                placeholder="Ej. IVE, BTS, BLACKPINK..." 
+                placeholder="Ej. Marvel, Star Wars, Taylor Swift..." 
                 value={formData.name}
                 onChange={handleInputChange}
                 className={formErrors.name ? "border-red-500 focus-visible:ring-red-400" : ""}
               />
               {formErrors.name && (
+                <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="fandom-category">Categoría *</Label>
+              <select
+                id="fandom-category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className={`rounded-md border border-gray-300 w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 ${
+                  formErrors.category ? "border-red-500 focus-visible:ring-red-400" : ""
+                }`}
+              >
+                <option value="">Selecciona una categoría</option>
+                {fandomCategories.slice(1).map(category => (
+                  <option key={category.id} value={category.slug}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {formErrors.category && (
                 <p className="text-red-500 text-xs mt-1">Este campo es obligatorio</p>
               )}
             </div>

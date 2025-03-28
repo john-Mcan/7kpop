@@ -6,17 +6,35 @@ import { Button } from "@/components/ui/button";
 import { FandomAvatar } from "@/components/ui/fandom-avatar";
 import Link from "next/link";
 
+// Definir una interfaz común para todos los fandoms
+interface Fandom {
+  id: string | number;
+  nombre: string;
+  avatar?: string;
+  banner?: string;
+  miembros: number;
+  posts: number;
+  publicaciones?: number;
+  postsNuevos?: number;
+  descripcion: string;
+  inicial: string;
+  siguiendo?: boolean;
+}
+
 export default function MisFandomsPage() {
   // Datos de ejemplo para los fandoms del usuario
-  const misFandoms = [
+  const misFandoms: Fandom[] = [
     {
-      id: 1,
+      id: "bts",
       nombre: "BTS",
-      descripcion: "El fandom oficial de BTS (Bangtan Sonyeondan) en 7Kpop",
-      miembros: 15600,
-      posts: 4325,
-      postsNuevos: 12,
-      inicial: "B"
+      avatar: "/avatars/bts.jpg",
+      banner: "/banners/bts.jpg",
+      miembros: 23453,
+      posts: 9876,
+      publicaciones: 9876,
+      descripcion: "El fandom oficial de BTS (Bangtan Sonyeondan) en fanverse",
+      inicial: "B",
+      siguiendo: true
     },
     {
       id: 3,
@@ -35,11 +53,23 @@ export default function MisFandomsPage() {
       posts: 2198,
       postsNuevos: 5,
       inicial: "N"
+    },
+    {
+      id: "svt",
+      nombre: "SEVENTEEN",
+      avatar: "/avatars/svt.jpg",
+      banner: "/banners/svt.jpg",
+      miembros: 8273,
+      posts: 3421,
+      publicaciones: 3421,
+      descripcion: "El hogar de CARATS en fanverse",
+      inicial: "S",
+      siguiendo: true
     }
   ];
 
   // Fandoms recomendados
-  const fandomsRecomendados = [
+  const fandomsRecomendados: Fandom[] = [
     {
       id: 2,
       nombre: "BLACKPINK",
@@ -51,9 +81,10 @@ export default function MisFandomsPage() {
     {
       id: 4,
       nombre: "SEVENTEEN",
-      descripcion: "El hogar de CARATS en 7Kpop",
+      descripcion: "El hogar de CARATS en fanverse",
       miembros: 9800,
       posts: 2567,
+      postsNuevos: 5,
       inicial: "S"
     }
   ];
@@ -118,7 +149,7 @@ export default function MisFandomsPage() {
                               <h3 className="text-base font-bold text-gray-900">
                                 {fandom.nombre}
                               </h3>
-                              {fandom.postsNuevos > 0 && (
+                              {fandom.postsNuevos && fandom.postsNuevos > 0 && (
                                 <div className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">
                                   {fandom.postsNuevos} nuevos
                                 </div>
