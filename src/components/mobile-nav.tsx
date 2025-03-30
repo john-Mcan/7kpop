@@ -29,7 +29,7 @@ const MobileNav = () => {
     : navItems;  // Mantener todos los elementos si hay usuario
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-10">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-50">
       <div className="flex justify-around items-center h-16">
         {allItems.map((item) => {
           const isActive = pathname === item.href;

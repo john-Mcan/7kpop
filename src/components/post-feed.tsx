@@ -11,9 +11,12 @@ import UserAvatar from "./ui/user-avatar";
 import SocialButton from "./ui/social-button";
 import { getFandomColor } from "@/lib/utils/fandom-colors";
 import { getFandomByName, getFandomById, getFandomBySlug, fandomsData } from "@/lib/data/fandoms";
+import SharePost from "./ui/share-post";
+import ReportPost from "./ui/report-post";
 
 type Post = {
   id: number;
+  slug?: string;
   fandom: {
     name: string;
     avatar: string;
@@ -43,6 +46,7 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
   const allPosts: Post[] = [
     {
       id: 1,
+      slug: "nueva-pelicula-del-mcu",
       fandom: {
         name: "Marvel",
         avatar: "M",
@@ -64,6 +68,7 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
     },
     {
       id: 2,
+      slug: "concierto-en-ciudad-de-mexico",
       fandom: {
         name: "Taylor Swift",
         avatar: "T",
@@ -84,6 +89,7 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
     },
     {
       id: 3,
+      slug: "nuevo-anime-imperdible-esta-temporada",
       fandom: {
         name: "Anime",
         avatar: "A",
@@ -135,20 +141,45 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
 const PostCard = ({ post }: { post: Post }) => {
   const [showComments, setShowComments] = useState(false);
   const { isMobile } = useDeviceDetect();
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   
   const handleCommentsToggle = () => {
     setShowComments(!showComments);
   };
 
+  // Manejadores para compartir y reportar modales
+  const handleShareOpenChange = (isOpen: boolean) => {
+    setIsShareOpen(isOpen);
+    // Si se está abriendo el modal de compartir, cerrar el de reportar
+    if (isOpen) {
+      setIsReportOpen(false);
+    }
+  };
+
+  const handleReportOpenChange = (isOpen: boolean) => {
+    setIsReportOpen(isOpen);
+    // Si se está abriendo el modal de reportar, cerrar el de compartir
+    if (isOpen) {
+      setIsShareOpen(false);
+    }
+  };
+
   // Obtener el slug del fandom para la URL
   const fandom = getFandomByName(post.fandom.name);
   const fandomSlug = fandom?.slug || post.fandom.name.toLowerCase();
+  
+  // URL para el post individual
+  const postUrl = `/?post=${post.slug || post.id}`;
 
   return (
     <div className="relative">
+      <Link href={postUrl} className="absolute inset-0 z-10">
+        <span className="sr-only">Ver publicación completa</span>
+      </Link>
       <Card className="border-gray-200 shadow-sm rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow">
-        <CardHeader className="p-4 pb-3 flex flex-row items-start gap-3">
-          <Link href={`/fandoms/${fandomSlug}`} className="flex-shrink-0 w-10 h-10">
+        <CardHeader className="p-4 pb-2 flex flex-row items-center gap-3">
+          <Link href={`/fandoms/${fandomSlug}`} className="flex-shrink-0 w-8 h-8 relative z-20">
             <UserAvatar 
               text={post.fandom.avatar}
               colorClass={getFandomColor(post.fandom.name, 'from-to')}
@@ -156,14 +187,14 @@ const PostCard = ({ post }: { post: Post }) => {
             />
           </Link>
           <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Link href={`/fandoms/${fandomSlug}`} className="font-semibold text-sm hover:text-purple-700 transition-colors">
+            <div className="flex items-center gap-2">
+              <Link href={`/fandoms/${fandomSlug}`} className="font-semibold text-xs text-gray-700 hover:text-purple-700 transition-colors relative z-20">
                 {post.fandom.name}
               </Link>
               <p className="text-gray-500 text-xs">• {post.createdAt}</p>
             </div>
-            <div className="flex items-center mt-1">
-              <Link href={`/perfil/${post.author.username}`} className="text-xs text-gray-600 hover:text-purple-700 transition-colors">
+            <div className="flex items-center">
+              <Link href={`/perfil/${post.author.username}`} className="text-xs text-gray-500 hover:text-purple-700 transition-colors relative z-20">
                 {post.author.username}
               </Link>
               <div className="ml-2 flex flex-wrap">
@@ -171,7 +202,7 @@ const PostCard = ({ post }: { post: Post }) => {
                   const groupFandom = getFandomByName(group);
                   const groupSlug = groupFandom?.slug || group.toLowerCase().replace(/\s+/g, '-');
                   return (
-                    <Link href={`/fandoms/${groupSlug}`} key={idx} className="inline-block px-1.5 py-0.5 bg-gray-100 text-purple-700 rounded-full text-[10px] mr-1 mb-1 hover:bg-purple-100 transition-colors">
+                    <Link href={`/fandoms/${groupSlug}`} key={idx} className="inline-block px-1.5 py-0.5 bg-gray-100 text-purple-700 rounded-full text-[10px] mr-1 mb-1 hover:bg-purple-100 transition-colors relative z-20">
                       {group}
                     </Link>
                   );
@@ -179,27 +210,25 @@ const PostCard = ({ post }: { post: Post }) => {
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full hover:bg-gray-100">
+          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full hover:bg-gray-100 relative z-20">
             <span className="sr-only">Mas opciones</span>
             <MoreVertical size={15} />
           </Button>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <Link href={`/post/${post.id}`}>
-            <h3 className="text-base font-semibold text-gray-900 mb-2 hover:text-purple-700 transition-colors">{post.title}</h3>
-          </Link>
+        <CardContent className="p-4 pt-3">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 relative hover:text-purple-700 transition-colors">{post.title}</h3>
           <p className="text-sm text-gray-700 leading-relaxed">{post.content}</p>
           {post.image && (
-            <Link href={`/post/${post.id}`} className="block mt-3 rounded-lg overflow-hidden bg-gray-100 w-full h-64">
+            <div className="block mt-3 rounded-lg overflow-hidden bg-gray-100 w-full h-64 relative">
               <img 
                 src="https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=1974&auto=format&fit=crop"
                 alt={`Imagen de ${post.fandom.name}`} 
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
-            </Link>
+            </div>
           )}
         </CardContent>
-        <CardFooter className="p-3 pt-2 flex justify-between border-t border-gray-100 mt-2">
+        <CardFooter className="p-3 pt-2 flex justify-between border-t border-gray-100 mt-2 relative z-20">
           <div className="flex items-center gap-3">
             <SocialButton 
               icon={ThumbsUp} 
@@ -225,28 +254,31 @@ const PostCard = ({ post }: { post: Post }) => {
           </div>
           
           <div className="flex items-center">
-            <SocialButton 
-              icon={Share} 
-              label="Compartir"
-              className="sm:gap-1"
-              labelClassName="hidden sm:inline"
+            <SharePost 
+              postTitle={post.title} 
+              postSlug={post.slug || post.id.toString()} 
+              isReportOpen={isReportOpen}
+              onOpenChange={handleShareOpenChange}
             />
-            <SocialButton 
-              icon={Flag} 
-              className="ml-0.5"
+            <ReportPost 
+              postId={post.id} 
+              postSlug={post.slug || post.id.toString()} 
+              isShareOpen={isShareOpen}
+              onOpenChange={handleReportOpenChange}
             />
           </div>
         </CardFooter>
         
         {/* Seccion de comentarios integrada */}
         {showComments && !isMobile && (
-          <div className="border-t border-gray-100">
+          <div className="border-t border-gray-100 relative z-20">
             <div className="p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Comentarios ({post.comments})</h3>
               <CommentsComponent 
                 postId={post.id}
                 commentsCount={post.comments}
                 forceShowComments={true}
+                hideButton={true}
               />
             </div>
           </div>

@@ -981,3 +981,579 @@ CREATE INDEX idx_fandoms_category ON public.fandoms(category);
 ```
 
 Las categorías son una parte fundamental del sistema de fandoms, permitiendo a los usuarios filtrar y encontrar comunidades específicas según sus intereses. Al implementar estas categorías en la base de datos, se mejora tanto la experiencia de usuario como la organización del contenido. 
+
+## Actualizaciones para el sistema de mensajes y notificaciones
+
+Para mejorar el sistema de mensajes directos y notificaciones, se han añadido los siguientes elementos a la configuración de Supabase:
+
+### 1. Campo slug para la tabla fandoms
+
+Este campo es necesario para crear URLs amigables hacia las páginas de fandoms y para construir los enlaces en las notificaciones.
+
+```sql
+-- Añadir columna slug a la tabla fandoms
+ALTER TABLE public.fandoms
+ADD COLUMN slug TEXT UNIQUE;
+
+-- Crear un índice en el slug para optimizar búsquedas
+CREATE INDEX idx_fandoms_slug ON public.fandoms(slug);
+
+-- NOTA: Es necesario actualizar los fandoms existentes para asignarles un slug
+-- Ejemplo: UPDATE public.fandoms SET slug = 'bts' WHERE name = 'BTS';
+```
+
+### 2. Trigger para notificaciones de mensajes directos
+
+Crea automáticamente una notificación cuando un usuario recibe un mensaje directo:
+
+```sql
+-- Función para crear notificación de nuevo mensaje
+CREATE OR REPLACE FUNCTION public.create_new_message_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  sender_username TEXT;
+BEGIN
+  -- Obtener username del remitente para el contenido de la notificación
+  SELECT username INTO sender_username FROM public.profiles WHERE id = NEW.sender_id;
+
+  -- Insertar notificación para el destinatario
+  INSERT INTO public.notifications (
+    user_id, type, content, actor_id, link
+  )
+  VALUES (
+    NEW.recipient_id,
+    'system',
+    'Has recibido un nuevo mensaje de @' || sender_username,
+    NEW.sender_id,
+    '/mensajes'
+  );
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Trigger para ejecutar la función después de insertar un mensaje
+CREATE TRIGGER new_message_notification_trigger
+AFTER INSERT ON public.messages
+FOR EACH ROW EXECUTE PROCEDURE public.create_new_message_notification();
+```
+
+### 3. Triggers para notificaciones de votos positivos (upvotes)
+
+Crean automáticamente notificaciones cuando un usuario recibe un voto positivo en una publicación o comentario:
+
+```sql
+-- Función para crear notificación de upvote en post
+CREATE OR REPLACE FUNCTION public.create_post_upvote_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  post_author_id UUID;
+  sender_username TEXT;
+BEGIN
+  -- Notificar solo en inserción de upvote (1) o cambio de downvote (-1) a upvote (1)
+  IF (TG_OP = 'INSERT' AND NEW.vote_type = 1) OR (TG_OP = 'UPDATE' AND OLD.vote_type = -1 AND NEW.vote_type = 1) THEN
+    SELECT user_id INTO post_author_id FROM public.posts WHERE id = NEW.post_id;
+    SELECT username INTO sender_username FROM public.profiles WHERE id = NEW.user_id;
+
+    -- No notificar al autor si se vota a sí mismo
+    IF post_author_id IS NOT NULL AND post_author_id != NEW.user_id THEN
+      INSERT INTO public.notifications (
+        user_id, type, content, actor_id, post_id, link
+      )
+      VALUES (
+        post_author_id,
+        'upvote',
+        '@' || sender_username || ' ha votado positivamente tu publicación.',
+        NEW.user_id,
+        NEW.post_id,
+        '/fandoms/' || (SELECT f.slug FROM public.fandoms f JOIN public.posts p ON f.id = p.fandom_id WHERE p.id = NEW.post_id) || '/posts/' || NEW.post_id
+      );
+    END IF;
+  END IF;
+  RETURN NULL; 
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Trigger para notificación de upvote en post
+CREATE TRIGGER post_upvote_notification_trigger
+AFTER INSERT OR UPDATE ON public.post_votes
+FOR EACH ROW EXECUTE PROCEDURE public.create_post_upvote_notification();
+
+-- Función para crear notificación de upvote en comentario
+CREATE OR REPLACE FUNCTION public.create_comment_upvote_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+  comment_author_id UUID;
+  sender_username TEXT;
+  related_post_id UUID;
+  fandom_slug TEXT;
+BEGIN
+  -- Notificar solo en inserción de upvote (1) o cambio de downvote (-1) a upvote (1)
+  IF (TG_OP = 'INSERT' AND NEW.vote_type = 1) OR (TG_OP = 'UPDATE' AND OLD.vote_type = -1 AND NEW.vote_type = 1) THEN
+    SELECT user_id, post_id INTO comment_author_id, related_post_id FROM public.comments WHERE id = NEW.comment_id;
+    SELECT username INTO sender_username FROM public.profiles WHERE id = NEW.user_id;
+
+    -- No notificar al autor si se vota a sí mismo
+    IF comment_author_id IS NOT NULL AND comment_author_id != NEW.user_id THEN
+      -- Obtener slug del fandom para el link
+      SELECT f.slug INTO fandom_slug
+      FROM public.fandoms f
+      JOIN public.posts p ON f.id = p.fandom_id
+      WHERE p.id = related_post_id;
+
+      INSERT INTO public.notifications (
+        user_id, type, content, actor_id, comment_id, post_id, link
+      )
+      VALUES (
+        comment_author_id,
+        'upvote',
+        '@' || sender_username || ' ha votado positivamente tu comentario.',
+        NEW.user_id,
+        NEW.comment_id,
+        related_post_id,
+        '/fandoms/' || fandom_slug || '/posts/' || related_post_id || '#comment-' || NEW.comment_id
+      );
+    END IF;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Trigger para notificación de upvote en comentario
+CREATE TRIGGER comment_upvote_notification_trigger
+AFTER INSERT OR UPDATE ON public.comment_votes
+FOR EACH ROW EXECUTE PROCEDURE public.create_comment_upvote_notification();
+```
+
+### 4. Vista para lista de conversaciones
+
+Esta vista facilita obtener la lista de conversaciones del usuario actual con los últimos mensajes y el conteo de mensajes no leídos:
+
+```sql
+-- Crear vista para obtener la lista de conversaciones del usuario actual
+CREATE OR REPLACE VIEW public.conversation_list AS
+WITH ranked_messages AS (
+  -- Selecciona y numera los mensajes por cada par de usuarios único
+  SELECT
+    m.id AS message_id,
+    m.created_at,
+    m.content,
+    m.sender_id,
+    m.recipient_id,
+    m.is_read,
+    -- Identifica al otro participante
+    CASE
+      WHEN m.sender_id = auth.uid() THEN m.recipient_id
+      ELSE m.sender_id
+    END AS other_participant_id,
+    -- Identificador único de la conversación (participantes ordenados)
+    CASE
+      WHEN m.sender_id < m.recipient_id THEN m.sender_id || '_' || m.recipient_id
+      ELSE m.recipient_id || '_' || m.sender_id
+    END AS conversation_pair_id,
+    -- Rango de mensajes dentro de cada conversación, el más reciente es 1
+    ROW_NUMBER() OVER (PARTITION BY CASE WHEN m.sender_id < m.recipient_id THEN m.sender_id || '_' || m.recipient_id ELSE m.recipient_id || '_' || m.sender_id END ORDER BY m.created_at DESC) as rn
+  FROM
+    public.messages m
+  WHERE
+    m.sender_id = auth.uid() OR m.recipient_id = auth.uid()
+),
+latest_messages AS (
+  -- Obtiene solo el último mensaje de cada conversación
+  SELECT * FROM ranked_messages WHERE rn = 1
+),
+unread_counts AS (
+  -- Cuenta los mensajes no leídos por el usuario actual de cada remitente
+  SELECT
+    sender_id AS other_participant_id,
+    COUNT(*) AS unread_count
+  FROM
+    public.messages
+  WHERE
+    recipient_id = auth.uid() AND NOT is_read
+  GROUP BY
+    sender_id
+)
+-- Combina la información
+SELECT
+  lm.conversation_pair_id AS id, -- ID único de la conversación
+  lm.other_participant_id AS userId, -- ID del otro usuario
+  p.username AS username, -- Username del otro usuario
+  p.username AS displayName, -- Usar username o un campo de nombre real si existe en 'profiles'
+  p.avatar_url AS avatar, -- Avatar del otro usuario
+  lm.content AS lastMessage, -- Contenido del último mensaje
+  lm.created_at AS timestamp, -- Fecha del último mensaje
+  COALESCE(uc.unread_count, 0) AS unreadCount -- Conteo de no leídos
+FROM
+  latest_messages lm
+JOIN
+  public.profiles p ON lm.other_participant_id = p.id -- Une con perfiles para obtener datos del otro usuario
+LEFT JOIN
+  unread_counts uc ON lm.other_participant_id = uc.other_participant_id; -- Une con conteos de no leídos
+
+-- Permisos para la vista
+GRANT SELECT ON public.conversation_list TO authenticated;
+```
+
+### 5. Configuración de políticas Realtime para mensajería en tiempo real
+
+Estas políticas permiten a los usuarios recibir actualizaciones en tiempo real sobre nuevos mensajes y notificaciones a través de WebSockets:
+
+```sql
+-- Asegurar que las tablas están habilitadas para Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+
+-- Política Realtime para la tabla 'messages'
+CREATE POLICY "Allow realtime listening on messages for participants"
+ON public.messages FOR SELECT 
+USING (
+  auth.role() = 'authenticated' AND 
+  (auth.uid() = sender_id OR auth.uid() = recipient_id)
+);
+
+-- Política Realtime para la tabla 'notifications'
+CREATE POLICY "Allow realtime listening on notifications for target user"
+ON public.notifications FOR SELECT
+USING (
+  auth.role() = 'authenticated' AND
+  auth.uid() = user_id
+);
+```
+
+### Integración con frontend
+
+Para integrar estas funcionalidades con el frontend, será necesario:
+
+1. Reemplazar los datos estáticos con llamadas a Supabase usando la librería cliente.
+2. Implementar las funciones para enviar mensajes y marcar notificaciones como leídas.
+3. Configurar suscripciones de Supabase Realtime para recibir actualizaciones en tiempo real.
+4. Implementar la funcionalidad "escribiendo..." utilizando canales personalizados de Realtime.
+
+Ejemplo de código para escuchar nuevos mensajes y notificaciones con Supabase Realtime:
+
+```typescript
+// En un useEffect del componente principal
+useEffect(() => {
+  // Suscripción a nuevos mensajes
+  const messagesSubscription = supabase
+    .channel('messages-channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `recipient_id=eq.${user.id}`,
+      },
+      (payload) => {
+        // Actualizar UI con nuevo mensaje
+        console.log('Nuevo mensaje recibido', payload);
+        // Actualizar conversaciones y/o mensajes de la conversación actual
+      }
+    )
+    .subscribe();
+
+  // Suscripción a nuevas notificaciones
+  const notificationsSubscription = supabase
+    .channel('notifications-channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      },
+      (payload) => {
+        // Actualizar UI con nueva notificación
+        console.log('Nueva notificación recibida', payload);
+        // Actualizar contador y lista de notificaciones
+      }
+    )
+    .subscribe();
+
+  // Limpiar suscripciones al desmontar
+  return () => {
+    supabase.removeChannel(messagesSubscription);
+    supabase.removeChannel(notificationsSubscription);
+  };
+}, [user.id, supabase]);
+``` 
+
+## Actualizaciones de seguridad y optimización
+
+Las siguientes correcciones y mejoras fueron aplicadas para resolver advertencias de seguridad y optimizar el rendimiento de la base de datos.
+
+### 1. Corrección de vista conversation_list (SECURITY INVOKER)
+
+La vista `conversation_list` fue redefinida para usar explícitamente `SECURITY INVOKER` en lugar de `SECURITY DEFINER`:
+
+```sql
+-- Eliminar la vista existente para una recreación limpia
+DROP VIEW IF EXISTS public.conversation_list;
+
+-- Recrear la vista especificando SECURITY INVOKER explícitamente
+CREATE OR REPLACE VIEW public.conversation_list
+WITH (security_invoker = true) -- Asegura explícitamente que use los permisos del invocador
+AS
+WITH ranked_messages AS (
+  SELECT
+    m.id AS message_id,
+    m.created_at,
+    m.content,
+    m.sender_id,
+    m.recipient_id,
+    m.is_read,
+    CASE
+      WHEN m.sender_id = auth.uid() THEN m.recipient_id
+      ELSE m.sender_id
+    END AS other_participant_id,
+    CASE
+      WHEN m.sender_id < m.recipient_id THEN m.sender_id || '_' || m.recipient_id
+      ELSE m.recipient_id || '_' || m.sender_id
+    END AS conversation_pair_id,
+    ROW_NUMBER() OVER (PARTITION BY CASE WHEN m.sender_id < m.recipient_id THEN m.sender_id || '_' || m.recipient_id ELSE m.recipient_id || '_' || m.sender_id END ORDER BY m.created_at DESC) as rn
+  FROM
+    public.messages m
+  WHERE
+    -- Filtro principal para asegurar que el usuario actual participa
+    (m.sender_id = auth.uid() OR m.recipient_id = auth.uid()) AND
+    -- Segunda capa de seguridad: Asegurar que la política RLS de la tabla 'messages' se evalúe
+    (SELECT TRUE FROM public.messages WHERE id = m.id)
+),
+latest_messages AS (
+  SELECT * FROM ranked_messages WHERE rn = 1
+),
+unread_counts AS (
+  SELECT
+    sender_id AS other_participant_id,
+    COUNT(*) AS unread_count
+  FROM
+    public.messages m
+  WHERE
+    recipient_id = auth.uid() AND NOT is_read AND
+    -- Segunda capa de seguridad: Asegurar que la política RLS de la tabla 'messages' se evalúe
+    (SELECT TRUE FROM public.messages WHERE id = m.id)
+  GROUP BY
+    sender_id
+)
+-- Combina la información
+SELECT
+  lm.conversation_pair_id AS id,
+  lm.other_participant_id AS userId,
+  p.username AS username,
+  p.username AS displayName,
+  p.avatar_url AS avatar,
+  lm.content AS lastMessage,
+  lm.created_at AS timestamp,
+  COALESCE(uc.unread_count, 0) AS unreadCount
+FROM
+  latest_messages lm
+JOIN
+  -- Aseguramos que solo se puedan ver perfiles visibles según RLS de profiles
+  public.profiles p ON lm.other_participant_id = p.id AND (SELECT TRUE FROM public.profiles WHERE id = p.id)
+LEFT JOIN
+  unread_counts uc ON lm.other_participant_id = uc.other_participant_id;
+
+-- Otorgar permisos necesarios
+GRANT SELECT ON public.conversation_list TO authenticated;
+```
+
+Nota: El uso de `SECURITY INVOKER` en vistas es generalmente inseguro cuando se utiliza Row Level Security (RLS), ya que ejecuta todas las consultas con los permisos del usuario que llama.
+
+### 2. Corrección del search_path en funciones
+
+Todas las funciones definidas deben tener un `search_path` explícito para evitar problemas de seguridad relacionados con la búsqueda de objetos. Se corrigieron las siguientes funciones:
+
+#### 2.1. Función get_paginated_posts
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_paginated_posts(
+  p_fandom_id UUID DEFAULT NULL,
+  p_last_cursor BIGINT DEFAULT NULL,
+  p_limit INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  id UUID,
+  title TEXT,
+  content TEXT,
+  user_id UUID,
+  fandom_id UUID,
+  upvotes INTEGER,
+  downvotes INTEGER,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  slug TEXT,
+  url TEXT,
+  cursor_id BIGINT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    p.id, p.title, p.content, p.user_id, p.fandom_id,
+    p.upvotes, p.downvotes, p.created_at, p.updated_at,
+    p.slug, p.url, p.cursor_id
+  FROM
+    public.posts p
+  WHERE
+    (p_fandom_id IS NULL OR p.fandom_id = p_fandom_id) AND
+    (p_last_cursor IS NULL OR p.cursor_id < p_last_cursor)
+  ORDER BY
+    p.cursor_id DESC
+  LIMIT
+    p_limit;
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public;
+```
+
+#### 2.2. Función get_paginated_comments
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_paginated_comments(
+  p_post_id UUID,
+  p_last_created_at TIMESTAMPTZ DEFAULT NULL,
+  p_last_id UUID DEFAULT NULL,
+  p_limit INTEGER DEFAULT 20
+)
+RETURNS TABLE (
+  id UUID,
+  content TEXT,
+  user_id UUID,
+  post_id UUID,
+  parent_comment_id UUID,
+  upvotes INTEGER,
+  downvotes INTEGER,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    c.id, c.content, c.user_id, c.post_id, c.parent_comment_id,
+    c.upvotes, c.downvotes, c.created_at, c.updated_at
+  FROM
+    public.comments c
+  WHERE
+    c.post_id = p_post_id AND
+    (
+      p_last_created_at IS NULL OR
+      (c.created_at < p_last_created_at) OR
+      (c.created_at = p_last_created_at AND c.id < p_last_id)
+    )
+  ORDER BY
+    c.created_at DESC, c.id DESC
+  LIMIT
+    p_limit;
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public;
+```
+
+#### 2.3. Función generate_post_slug
+
+```sql
+CREATE OR REPLACE FUNCTION public.generate_post_slug()
+RETURNS TRIGGER AS $$
+DECLARE
+  base_slug TEXT;
+  final_slug TEXT;
+  fandom_record_slug TEXT;
+  counter INTEGER := 1;
+BEGIN
+  -- Crear slug básico desde el título
+  base_slug := lower(regexp_replace(NEW.title, '[^a-zA-Z0-9\s-]', '', 'g'));
+  base_slug := trim(regexp_replace(base_slug, '\s+', '-', 'g'));
+
+  -- Si el slug base queda vacío después de la limpieza, usar un valor predeterminado
+  IF base_slug = '' THEN
+     base_slug := coalesce(NEW.id::text, 'post'); 
+  END IF;
+
+  -- Asignar el slug inicial
+  final_slug := base_slug;
+
+  -- Verificar si el slug ya existe
+  WHILE EXISTS(SELECT 1 FROM public.posts WHERE slug = final_slug AND id != NEW.id) LOOP
+    -- Si existe, añadir contador
+    final_slug := base_slug || '-' || counter;
+    counter := counter + 1;
+  END LOOP;
+
+  -- Asignar el slug generado
+  NEW.slug := final_slug;
+
+  -- Construir la URL completa
+  SELECT f.slug INTO fandom_record_slug FROM public.fandoms f WHERE f.id = NEW.fandom_id;
+  
+  -- Verificar si se encontró el slug del fandom
+  IF fandom_record_slug IS NULL THEN
+    NEW.url := NULL; -- O asignar una URL alternativa sin fandom
+  ELSE
+    NEW.url := '/fandoms/' || fandom_record_slug || '/posts/' || final_slug;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE SECURITY INVOKER SET search_path = public;
+
+-- Asegurar que el trigger use la versión correcta de la función
+DROP TRIGGER IF EXISTS set_post_slug ON public.posts;
+CREATE TRIGGER set_post_slug
+BEFORE INSERT OR UPDATE OF title ON public.posts
+FOR EACH ROW
+EXECUTE FUNCTION public.generate_post_slug();
+```
+
+### 3. Índices optimizados para búsquedas frecuentes
+
+```sql
+-- Índices para tabla de posts
+CREATE INDEX idx_posts_user_id ON public.posts(user_id);
+CREATE INDEX idx_posts_fandom_id ON public.posts(fandom_id);
+CREATE INDEX idx_posts_created_at ON public.posts(created_at DESC);
+CREATE INDEX idx_posts_fandom_date ON public.posts(fandom_id, created_at DESC);
+CREATE INDEX idx_posts_popularity ON public.posts((upvotes - downvotes) DESC);
+
+-- Índices para tabla de comentarios
+CREATE INDEX idx_comments_post_id ON public.comments(post_id);
+CREATE INDEX idx_comments_parent_id ON public.comments(parent_comment_id);
+CREATE INDEX idx_comments_post_date ON public.comments(post_id, created_at DESC);
+CREATE INDEX idx_comments_user_id ON public.comments(user_id);
+
+-- Índice de texto completo para búsquedas de contenido
+CREATE INDEX idx_posts_content_search ON public.posts USING gin(to_tsvector('spanish', title || ' ' || content));
+CREATE INDEX idx_comments_content_search ON public.comments USING gin(to_tsvector('spanish', content));
+
+-- Índices para mensajes
+CREATE INDEX idx_messages_recipient_id ON public.messages(recipient_id);
+CREATE INDEX idx_messages_created_at ON public.messages(created_at DESC);
+CREATE INDEX idx_messages_conversation ON public.messages(sender_id, recipient_id, created_at DESC);
+
+-- Índices para notificaciones
+CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX idx_notifications_created_at ON public.notifications(created_at DESC);
+CREATE INDEX idx_notifications_is_read ON public.notifications(user_id, is_read);
+```
+
+### 4. Notas importantes para desarrolladores
+
+1. **Uso de SECURITY INVOKER vs SECURITY DEFINER**:
+   - SECURITY INVOKER (predeterminado): Las consultas se ejecutan con los permisos del usuario que llama. Esto es más seguro para respetar las políticas RLS.
+   - SECURITY DEFINER: Las consultas se ejecutan con los permisos del usuario que definió la función/vista. Usar solo cuando sea absolutamente necesario.
+
+2. **Siempre especificar search_path en funciones**:
+   - `SET search_path = public` evita posibles ataques de confusión cuando los usuarios modifican su search_path.
+
+3. **Consideraciones de rendimiento**:
+   - Usar `STABLE` para funciones que no modifican la base de datos.
+   - Usar `VOLATILE` para funciones que tienen efectos secundarios.
+   - Añadir índices adecuados para queries frecuentes.
+
+4. **Paginación eficiente**:
+   - La paginación basada en cursores (`cursor_id`) es más eficiente que offset/limit para conjuntos de datos grandes.
+   - Asegurarse de que los campos usados para paginación tengan índices.
+
+5. **Slugs y URLs amigables**:
+   - Siempre validar y limpiar los inputs para crear slugs.
+   - Manejar casos donde los slugs podrían quedar vacíos o duplicados.
+   - Verificar la existencia de referencias a otras tablas (como fandom_id) antes de construir URLs. 

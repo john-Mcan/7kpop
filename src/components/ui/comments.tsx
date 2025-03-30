@@ -331,7 +331,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
   return (
     <>
       {/* Botón para mostrar comentarios (opcionalmente oculto) */}
-      {!hideButton && (
+      {!hideButton && !forceShowComments && (
         <Button 
           variant="ghost" 
           size="sm" 
@@ -344,9 +344,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       )}
 
       {/* Para pantallas de PC, mostrar directamente el contenido si forceShowComments es true */}
-      {forceShowComments && !isMobile && (
-        <CommentsContent />
-      )}
+      {forceShowComments && !isMobile && <CommentsContent />}
 
       {/* Visualización inline para escritorio si no es forzado */}
       {showComments && !isMobile && !forceShowComments && (

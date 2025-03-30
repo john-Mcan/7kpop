@@ -8,6 +8,7 @@ const TrendingSidebar = () => {
   const trendingPosts = [
     {
       id: 1,
+      slug: "nueva-cancion-de-bts-arrasa-en-las-listas",
       title: "Nueva canción de BTS arrasa en las listas",
       fandom: "BTS",
       likes: 2453,
@@ -15,6 +16,7 @@ const TrendingSidebar = () => {
     },
     {
       id: 2,
+      slug: "blackpink-anuncia-gira-latinoamericana",
       title: "BLACKPINK anuncia gira latinoamericana",
       fandom: "BLACKPINK",
       likes: 1982,
@@ -22,6 +24,7 @@ const TrendingSidebar = () => {
     },
     {
       id: 3,
+      slug: "twice-lanza-nueva-coleccion-de-merchandising",
       title: "TWICE lanza nueva colección de merchandising",
       fandom: "TWICE",
       likes: 1540,
@@ -51,7 +54,7 @@ const TrendingSidebar = () => {
           <div className="space-y-3">
             {trendingPosts.map((post) => (
               <Link 
-                href={`/post/${post.id}`} 
+                href={`/?post=${post.slug}`} 
                 key={post.id}
                 className="block"
               >

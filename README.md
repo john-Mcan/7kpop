@@ -37,6 +37,7 @@ El proyecto tiene implementado:
   - Fandoms (listado de comunidades disponibles)
   - Mis Fandoms (fandoms seguidos y recomendados)
   - Detalle de Fandom (perfil completo con publicaciones)
+  - Vista individual de post (con comentarios, sistema para compartir y reportar)
 - **Sistema de Fandoms**:
   - Exploración de comunidades
   - Estructura de datos para fandoms
@@ -44,6 +45,20 @@ El proyecto tiene implementado:
   - Perfil detallado de cada fandom
   - Vista de publicaciones específicas de un fandom
   - Componente mejorado para crear publicaciones
+- **Sistema de Posts**:
+  - Feed de posts con vista de tarjeta
+  - Vista individual de post completo
+  - Sistema de votación (upvote/downvote)
+  - Funcionalidad para compartir en redes sociales
+  - Sistema para reportar contenido inapropiado
+- **Sistema de Comentarios**:
+  - Visualización de comentarios en posts
+  - Respuestas anidadas a comentarios
+  - Votación en comentarios
+- **Sistema de Mensajes y Notificaciones**:
+  - Interfaz para visualizar conversaciones
+  - Sistema de notificaciones
+  - Indicadores de mensajes no leídos
 - **Diseño responsivo**: Adaptación para móviles y escritorio
 
 ## Cómo ejecutar localmente
@@ -82,9 +97,13 @@ fanverse/
 │   │   └── mis-fandoms/     # Fandoms seguidos por el usuario
 │   ├── components/          # Componentes reutilizables
 │   │   ├── ui/              # Componentes de UI básicos
+│   │   │   ├── share-post.tsx    # Componente para compartir posts
+│   │   │   ├── report-post.tsx   # Componente para reportar posts
+│   │   │   └── comments.tsx      # Componente de comentarios
 │   │   ├── navigation-sidebar.tsx  # Navegación lateral
 │   │   ├── mobile-nav.tsx   # Navegación móvil
 │   │   ├── post-feed.tsx    # Feed de publicaciones
+│   │   ├── single-post-view.tsx  # Vista individual de posts
 │   │   └── trending-sidebar.tsx    # Sidebar de tendencias
 │   ├── lib/                 # Utilidades y funciones auxiliares
 │   └── styles/              # Estilos globales
@@ -98,7 +117,7 @@ fanverse/
 3. ⏳ Refactorizar componentes para trabajar con interfaces de datos reales
 4. ✅ Completar formularios de registro e inicio de sesión
 5. ⏳ Implementar carga y almacenamiento de imágenes
-6. ⏳ Desarrollo de funcionalidades de interacción (likes, comentarios, compartir)
+6. ✅ Desarrollo de funcionalidades de interacción (likes, comentarios, compartir)
 7. ⏳ Completar integración de datos reales en páginas existentes
 8. ⏳ Implementar validación de datos y manejo de errores robustos para formularios y operaciones críticas
 9. ✅ Implementar sistema de moderación de contenido
@@ -121,9 +140,12 @@ fanverse/
 26. ⏳ Preparación para lanzamiento oficial (beta)
 
 ### Tareas pendientes inmediatas
-1. ⏳ Refinar la página de mensajes/notificaciones
+1. ✅ Refinar la página de mensajes/notificaciones
 2. ⏳ Implementar vista de links de cualquier tipo en crear post de fandoms
-3. ⏳ Revisar si Supabase está preparado para manejar mensajes y notificaciones
+3. ✅ Implementar componentes para compartir y reportar posts
+4. ✅ Mejorar la jerarquía visual de las tarjetas de posts en el feed
+5. ⏳ Conectar los componentes de UI con Supabase
+6. ⏳ Implementar sistema de notificaciones en tiempo real
 
 ### Estado de la implementación de Supabase
 
@@ -137,12 +159,32 @@ Ya se ha configurado Supabase como backend para la aplicación, incluyendo:
   - Sistema de notificaciones y mensajería
 - **Seguridad**: Políticas de Row Level Security (RLS) configuradas para todas las tablas
 - **Middlewares**: Configuración para gestión de sesiones y autenticación
+- **Sistema de Mensajes**: Vista para lista de conversaciones y triggers para notificaciones de mensajes nuevos
+- **Notificaciones**: Triggers para crear notificaciones automáticas de respuestas y votos
+- **Optimización**: Índices mejorados para búsquedas y funciones para paginación eficiente
+- **Tiempo Real**: Configuración de canales para actualizaciones en tiempo real de mensajes y notificaciones
+- **Seguridad Avanzada**: Correcciones en funciones y vistas para asegurar un funcionamiento seguro
 
 Ver archivo `SUPABASE.md` para la documentación completa sobre la configuración de Supabase.
 
 ## Cambios recientes
 
-### Última actualización (Marzo 28, 2023)
+### Última actualización (Mayo 2023)
+- Implementación de vista individual de posts con sistema completo de comentarios
+- Creación de componentes reutilizables para compartir y reportar posts
+- Mejora en la jerarquía visual de las tarjetas de posts en el feed
+- Refinamiento de la página de mensajes y notificaciones
+- Implementación de interacción completa en posts (compartir, reportar, votar, comentar)
+- Corrección del diseño para que todo el post sea clickeable, excepto los enlaces específicos
+- Eliminación de botones redundantes en la interfaz de comentarios
+- Actualización de la configuración de Supabase con:
+  - Sistema de notificaciones en tiempo real
+  - Optimización de consultas con índices
+  - Mejoras de seguridad en funciones
+  - Vista para conversaciones y mensajes
+  - Triggers para notificaciones automáticas
+
+### Actualización anterior (Marzo 28, 2023)
 - Cambio del branding de 7Kpop a fanverse
 - Implementación de base de datos para categorización de fandoms
 - Eliminación de la página de votaciones y creación de la página de mensajes/notificaciones

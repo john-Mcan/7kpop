@@ -219,9 +219,11 @@ export default function MensajesPage() {
   const handleOpenConversation = (id: string) => {
     setSelectedConversation(id);
     
-    // En móvil abrimos el modal, en desktop mostramos en línea
+    // En móvil abrimos el modal, en desktop cambiamos a la pestaña de conversaciones
     if (window.innerWidth < 768) {
       setShowModal(true);
+    } else {
+      setActiveTab("conversaciones");
     }
   };
 
@@ -281,6 +283,12 @@ export default function MensajesPage() {
                       )}
                     </div>
                   </TabsTrigger>
+                  <TabsTrigger value="conversaciones" className="hidden md:flex flex-1 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Conversaciones</span>
+                    </div>
+                  </TabsTrigger>
                   <TabsTrigger value="notificaciones" className="flex-1 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4" />
@@ -295,26 +303,25 @@ export default function MensajesPage() {
                 </TabsList>
 
                 <TabsContent value="mensajes" className="flex-1 overflow-hidden mt-0">
-                  <div className="md:grid md:grid-cols-12 gap-4 h-full">
-                    {/* Lista de conversaciones */}
-                    <div className={`md:col-span-4 lg:col-span-3 h-full overflow-y-auto pr-2`}>
-                      <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-sm font-semibold text-gray-700">Tus conversaciones</h3>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="rounded-full w-8 h-8 p-0 hover:bg-purple-100"
-                          onClick={() => setShowNewMessageModal(true)}
-                        >
-                          <Plus className="w-4 h-4 text-purple-600" />
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {conversaciones.map((conv) => (
+                  <div className="h-full overflow-y-auto pr-2">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700">Tus conversaciones</h3>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="rounded-full w-8 h-8 p-0 hover:bg-purple-100"
+                        onClick={() => setShowNewMessageModal(true)}
+                      >
+                        <Plus className="w-4 h-4 text-purple-600" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {conversaciones.length > 0 ? (
+                        conversaciones.map((conv) => (
                           <Card 
                             key={conv.id} 
                             className={`hover:shadow-md transition-all cursor-pointer ${
-                              selectedConversation === conv.id && !showModal
+                              selectedConversation === conv.id
                                 ? 'bg-purple-50 border-purple-200'
                                 : 'bg-white border-gray-100'
                             }`}
@@ -345,206 +352,221 @@ export default function MensajesPage() {
                               </div>
                             </CardContent>
                           </Card>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Área de mensajes (solo visible en PC) */}
-                    <div className="hidden md:block md:col-span-8 lg:col-span-9 bg-white rounded-lg border border-gray-200 overflow-hidden h-full flex flex-col">
-                      {selectedConversation ? (
-                        <>
-                          {/* Encabezado de conversación */}
-                          <div className="bg-white border-b border-gray-200 p-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <UserAvatar 
-                                text={conversaciones.find(c => c.id === selectedConversation)?.displayName.charAt(0) || "U"}
-                                size="md" 
-                              />
-                              <div>
-                                <p className="font-semibold text-gray-800">
-                                  {conversaciones.find(c => c.id === selectedConversation)?.displayName}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  @{conversaciones.find(c => c.id === selectedConversation)?.username}
-                                </p>
-                              </div>
-                            </div>
-                            <button className="text-gray-500 hover:text-gray-700">
-                              <MoreVertical className="w-5 h-5" />
-                            </button>
-                          </div>
-                          
-                          {/* Mensajes */}
-                          <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                            <div className="space-y-3">
-                              {mensajesPorConversacion[selectedConversation]?.map((mensaje) => (
-                                <div 
-                                  key={mensaje.id} 
-                                  className={`flex ${mensaje.senderId === 'current_user' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                  <div className={`flex gap-2 max-w-[80%] ${mensaje.senderId === 'current_user' ? 'flex-row-reverse' : ''}`}>
-                                    {mensaje.senderId !== 'current_user' && (
-                                      <div className="flex-shrink-0 mt-1">
-                                        <UserAvatar text={mensaje.senderName.charAt(0)} size="sm" />
-                                      </div>
-                                    )}
-                                    <div>
-                                      <div 
-                                        className={`p-3 rounded-2xl break-words ${
-                                          mensaje.senderId === 'current_user' 
-                                            ? 'bg-purple-600 text-white rounded-tr-none'
-                                            : 'bg-white text-gray-800 rounded-tl-none'
-                                        }`}
-                                      >
-                                        {mensaje.content}
-                                      </div>
-                                      <p className="text-xs text-gray-500 mt-1 px-1">
-                                        {mensaje.timestamp}
-                                        {mensaje.senderId === 'current_user' && (
-                                          <span className="ml-1">
-                                            {mensaje.isRead ? (
-                                              <Check className="inline-block w-3 h-3 text-purple-600" />
-                                            ) : (
-                                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block ml-1 text-gray-400">
-                                                <polyline points="9 11 12 14 22 4"></polyline>
-                                              </svg>
-                                            )}
-                                          </span>
-                                        )}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          {/* Área de entrada de mensaje */}
-                          <div className="p-3 bg-white border-t border-gray-200">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1">
-                                <Input 
-                                  placeholder="Escribe un mensaje..."
-                                  value={messageInput}
-                                  onChange={(e) => setMessageInput(e.target.value)}
-                                  className="border-gray-200 focus:border-purple-400"
-                                  onKeyDown={(e) => e.key === 'Enter' && handleEnviarMensaje()}
-                                />
-                              </div>
-                              <Button 
-                                onClick={handleEnviarMensaje}
-                                className="bg-purple-600 hover:bg-purple-700 rounded-full"
-                                size="icon"
-                                disabled={messageInput.trim() === ""}
-                              >
-                                <Send className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </>
+                        ))
                       ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                          <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <MessageSquare className="w-8 h-8 text-purple-600" />
-                          </div>
-                          <h3 className="text-lg font-semibold text-gray-800 mb-1">Tus mensajes</h3>
-                          <p className="text-sm text-gray-600 mb-4 max-w-sm">
-                            Selecciona una conversación para comenzar a chatear o inicia una nueva conversación
-                          </p>
-                          <Button 
-                            className="bg-purple-600 hover:bg-purple-700 px-4"
-                            onClick={() => setShowNewMessageModal(true)}
-                          >
-                            Nuevo mensaje
-                          </Button>
+                        <div className="text-center py-10">
+                          <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
+                          <h3 className="mt-2 text-sm font-medium text-gray-900">No hay conversaciones</h3>
+                          <p className="mt-1 text-sm text-gray-500">Inicia una nueva conversación para empezar a chatear.</p>
                         </div>
                       )}
                     </div>
                   </div>
                 </TabsContent>
 
-                <TabsContent value="notificaciones" className="flex-1 overflow-y-auto mt-0">
-                  <div className="space-y-2">
-                    {notificaciones.map((notif) => (
-                      <Card 
-                        key={notif.id} 
-                        className={`hover:shadow-md transition-all ${notif.isRead ? 'bg-white' : 'bg-purple-50 border-purple-100'}`}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 mt-1">
-                              {notif.actorAvatar ? (
-                                <img 
-                                  src={notif.actorAvatar} 
-                                  alt={notif.actorName || "Usuario"} 
-                                  className="w-10 h-10 rounded-full object-cover"
-                                />
-                              ) : notif.actorName ? (
-                                <UserAvatar text={notif.actorName.charAt(0)} size="md" />
-                              ) : (
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                  notif.type === 'system' ? 'bg-blue-100' : 
-                                  notif.type === 'upvote' ? 'bg-green-100' : 
-                                  notif.type === 'mention' ? 'bg-yellow-100' : 
-                                  notif.type === 'mod_action' ? 'bg-purple-100' : 'bg-gray-100'
-                                }`}>
-                                  {notif.type === 'reply' && <MessageSquare className="w-5 h-5 text-purple-600" />}
-                                  {notif.type === 'upvote' && (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"></path>
-                                      <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                                    </svg>
-                                  )}
-                                  {notif.type === 'mention' && (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600">
-                                      <circle cx="12" cy="12" r="4"></circle>
-                                      <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
-                                    </svg>
-                                  )}
-                                  {notif.type === 'system' && (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
-                                      <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-                                    </svg>
-                                  )}
-                                  {notif.type === 'mod_action' && (
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
-                                      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                                    </svg>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="text-sm text-gray-800">{notif.content}</p>
-                                  <p className="text-xs text-gray-500 mt-1">{notif.timestamp}</p>
-                                </div>
-                                {!notif.isRead && (
-                                  <button 
-                                    onClick={() => handleMarcarLeida(notif.id)}
-                                    className="text-gray-400 hover:text-purple-600 p-1.5"
-                                  >
-                                    <Check className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                              {notif.link && (
-                                <div className="mt-2">
-                                  <Link 
-                                    href={notif.link}
-                                    className="text-purple-600 hover:text-purple-800 text-sm font-medium"
-                                  >
-                                    Ver
-                                  </Link>
-                                </div>
-                              )}
+                <TabsContent value="conversaciones" className="flex-1 overflow-hidden mt-0">
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden h-full flex flex-col">
+                    {selectedConversation ? (
+                      <>
+                        {/* Encabezado de conversación */}
+                        <div className="bg-white border-b border-gray-200 p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <UserAvatar 
+                              text={conversaciones.find(c => c.id === selectedConversation)?.displayName.charAt(0) || "U"}
+                              size="md" 
+                            />
+                            <div>
+                              <p className="font-semibold text-gray-800">
+                                {conversaciones.find(c => c.id === selectedConversation)?.displayName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                @{conversaciones.find(c => c.id === selectedConversation)?.username}
+                              </p>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          <button className="text-gray-500 hover:text-gray-700">
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        </div>
+                        
+                        {/* Mensajes */}
+                        <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                          <div className="space-y-3">
+                            {mensajesPorConversacion[selectedConversation]?.map((mensaje) => (
+                              <div 
+                                key={mensaje.id} 
+                                className={`flex ${mensaje.senderId === 'current_user' ? 'justify-end' : 'justify-start'}`}
+                              >
+                                <div className={`flex gap-2 max-w-[80%] ${mensaje.senderId === 'current_user' ? 'flex-row-reverse' : ''}`}>
+                                  {mensaje.senderId !== 'current_user' && (
+                                    <div className="flex-shrink-0 mt-1">
+                                      <UserAvatar text={mensaje.senderName.charAt(0)} size="sm" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div 
+                                      className={`p-3 rounded-2xl break-words ${
+                                        mensaje.senderId === 'current_user' 
+                                          ? 'bg-purple-600 text-white rounded-tr-none'
+                                          : 'bg-white text-gray-800 rounded-tl-none'
+                                      }`}
+                                    >
+                                      {mensaje.content}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1 px-1">
+                                      {mensaje.timestamp}
+                                      {mensaje.senderId === 'current_user' && (
+                                        <span className="ml-1">
+                                          {mensaje.isRead ? (
+                                            <Check className="inline-block w-3 h-3 text-purple-600" />
+                                          ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block ml-1 text-gray-400">
+                                              <polyline points="9 11 12 14 22 4"></polyline>
+                                            </svg>
+                                          )}
+                                        </span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Área de entrada de mensaje */}
+                        <div className="p-3 bg-white border-t border-gray-200">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <Input 
+                                placeholder="Escribe un mensaje..."
+                                value={messageInput}
+                                onChange={(e) => setMessageInput(e.target.value)}
+                                className="border-gray-200 focus:border-purple-400"
+                                onKeyDown={(e) => e.key === 'Enter' && handleEnviarMensaje()}
+                              />
+                            </div>
+                            <Button 
+                              onClick={handleEnviarMensaje}
+                              className="bg-purple-600 hover:bg-purple-700 rounded-full"
+                              size="icon"
+                              disabled={messageInput.trim() === ""}
+                            >
+                              <Send className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                        <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MessageSquare className="w-8 h-8 text-purple-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-1">Tus conversaciones</h3>
+                        <p className="text-sm text-gray-600 mb-4 max-w-sm">
+                          Selecciona una conversación para comenzar a chatear o inicia una nueva conversación
+                        </p>
+                        <Button 
+                          className="bg-purple-600 hover:bg-purple-700 px-4"
+                          onClick={() => setShowNewMessageModal(true)}
+                        >
+                          Nuevo mensaje
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="notificaciones" className="flex-1 overflow-y-auto mt-0">
+                  <div className="space-y-2">
+                    {notificaciones.length > 0 ? (
+                      notificaciones.map((notif) => (
+                        <Card 
+                          key={notif.id} 
+                          className={`hover:shadow-md transition-all ${notif.isRead ? 'bg-white' : 'bg-purple-50 border-purple-100'}`}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex gap-3">
+                              <div className="flex-shrink-0 mt-1">
+                                {notif.actorAvatar ? (
+                                  <img 
+                                    src={notif.actorAvatar} 
+                                    alt={notif.actorName || "Usuario"} 
+                                    className="w-10 h-10 rounded-full object-cover"
+                                  />
+                                ) : notif.actorName ? (
+                                  <UserAvatar text={notif.actorName.charAt(0)} size="md" />
+                                ) : (
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                    notif.type === 'system' ? 'bg-blue-100' : 
+                                    notif.type === 'upvote' ? 'bg-green-100' : 
+                                    notif.type === 'mention' ? 'bg-yellow-100' : 
+                                    notif.type === 'mod_action' ? 'bg-purple-100' : 'bg-gray-100'
+                                  }`}>
+                                    {notif.type === 'reply' && <MessageSquare className="w-5 h-5 text-purple-600" />}
+                                    {notif.type === 'upvote' && (
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"></path>
+                                        <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                                      </svg>
+                                    )}
+                                    {notif.type === 'mention' && (
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600">
+                                        <circle cx="12" cy="12" r="4"></circle>
+                                        <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
+                                      </svg>
+                                    )}
+                                    {notif.type === 'system' && (
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                                      </svg>
+                                    )}
+                                    {notif.type === 'mod_action' && (
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
+                                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                      </svg>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="text-sm text-gray-800">{notif.content}</p>
+                                    <p className="text-xs text-gray-500 mt-1">{notif.timestamp}</p>
+                                  </div>
+                                  {!notif.isRead && (
+                                    <button 
+                                      onClick={() => handleMarcarLeida(notif.id)}
+                                      className="text-gray-400 hover:text-purple-600 p-1.5"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                                {notif.link && (
+                                  <div className="mt-2">
+                                    <Link 
+                                      href={notif.link}
+                                      className="text-purple-600 hover:text-purple-800 text-sm font-medium"
+                                    >
+                                      Ver
+                                    </Link>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="text-center py-10">
+                        <Bell className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">No hay notificaciones</h3>
+                        <p className="mt-1 text-sm text-gray-500">No tienes notificaciones nuevas por ahora.</p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
