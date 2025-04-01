@@ -3,7 +3,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ThumbsUp, ThumbsDown, MessageSquare, Share, MoreVertical, Flag, Send } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageSquare, Share, MoreVertical, Flag, Send, Link as LinkIcon } from "lucide-react";
 import CommentsComponent from "./ui/comments";
 import { useState, useEffect } from "react";
 import { useDeviceDetect } from "@/lib/hooks/useDeviceDetect";
@@ -13,6 +13,7 @@ import { getFandomColor } from "@/lib/utils/fandom-colors";
 import { getFandomByName, getFandomById, getFandomBySlug, fandomsData } from "@/lib/data/fandoms";
 import SharePost from "./ui/share-post";
 import ReportPost from "./ui/report-post";
+import React from "react";
 
 type Post = {
   id: number;
@@ -29,6 +30,8 @@ type Post = {
   title: string;
   content: string;
   image?: string;
+  video?: string;
+  url?: string;
   votes: {
     up: number;
     down: number;
@@ -59,6 +62,7 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
       title: "Nueva pelicula del MCU",
       content: "Alguien mas esta emocionado por la nueva pelicula? No puedo esperar a verla. El teaser se ve increible!",
       image: "/posts/marvel-movie.jpg",
+      url: "https://marvel.com/movies",
       votes: {
         up: 342,
         down: 12,
@@ -79,7 +83,7 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
         favoriteGroups: ["Taylor Swift", "Musica", "Conciertos"],
       },
       title: "Concierto en Ciudad de Mexico",
-      content: "El concierto en Ciudad de Mexico fue una experiencia increible. La energia de los artistas y el publico fue algo inolvidable. Alguien mas asistio?",
+      content: "El concierto en Ciudad de Mexico fue una experiencia increible. La energia de los artistas y el publico fue algo inolvidable. Alguien mas asistio? Visiten la página oficial para más fechas: https://www.taylorswift.com/events",
       votes: {
         up: 215,
         down: 5,
@@ -102,6 +106,7 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
       title: "Nuevo anime imperdible esta temporada",
       content: "He estado viendo la nueva serie que acaba de salir y es impresionante. La animacion es fluida y la historia te atrapa desde el primer capitulo. Alguien mas la esta siguiendo?",
       image: "/posts/anime-show.jpg",
+      video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
       votes: {
         up: 178,
         down: 3,
@@ -217,14 +222,68 @@ const PostCard = ({ post }: { post: Post }) => {
         </CardHeader>
         <CardContent className="p-4 pt-3">
           <h3 className="text-lg font-semibold text-gray-900 mb-2 relative hover:text-purple-700 transition-colors">{post.title}</h3>
-          <p className="text-sm text-gray-700 leading-relaxed">{post.content}</p>
+          <div className="text-sm text-gray-700 leading-relaxed mb-3 line-clamp-3">
+            {post.content.split(' ').map((word, index) => {
+              if (word.match(/^(https?:\/\/)/i)) { 
+                return (
+                  <React.Fragment key={index}>
+                    <a 
+                      href={word} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-words relative z-20"
+                      onClick={(e) => e.stopPropagation()} 
+                    >
+                      {word}
+                    </a>
+                    {' '}
+                  </React.Fragment>
+                );
+              }
+              return <React.Fragment key={index}>{word} </React.Fragment>;
+            })}
+          </div>
+          
           {post.image && (
             <div className="block mt-3 rounded-lg overflow-hidden bg-gray-100 w-full h-64 relative">
               <img 
-                src="https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=1974&auto=format&fit=crop"
+                src={String(post.image).match(/^https?:\/\//) ? post.image : 'https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=800&auto=format&fit=crop'} 
                 alt={`Imagen de ${post.fandom.name}`} 
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                onError={(e) => {
+                  if (e.currentTarget.src !== 'https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=800&auto=format&fit=crop') {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=800&auto=format&fit=crop';
+                  }
+                }}
               />
+            </div>
+          )}
+
+          {post.video && (
+            <div className="mt-3 rounded-lg overflow-hidden bg-gray-100 aspect-video relative">
+              <iframe
+                src={post.video}
+                className="w-full h-full"
+                allowFullScreen
+                title={post.title}
+              />
+            </div>
+          )}
+
+          {post.url && (
+            <div className="mt-3 p-3 rounded-lg border border-gray-200 bg-gray-50 relative">
+              <div className="flex items-center gap-2">
+                <LinkIcon size={14} className="text-blue-600 flex-shrink-0" />
+                <a 
+                  href={post.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline break-all relative z-20"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {post.url}
+                </a>
+              </div>
             </div>
           )}
         </CardContent>
@@ -269,7 +328,6 @@ const PostCard = ({ post }: { post: Post }) => {
           </div>
         </CardFooter>
         
-        {/* Seccion de comentarios integrada */}
         {showComments && !isMobile && (
           <div className="border-t border-gray-100 relative z-20">
             <div className="p-4">

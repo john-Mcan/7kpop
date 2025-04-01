@@ -146,6 +146,7 @@ fanverse/
 4. ✅ Mejorar la jerarquía visual de las tarjetas de posts en el feed
 5. ⏳ Conectar los componentes de UI con Supabase
 6. ⏳ Implementar sistema de notificaciones en tiempo real
+7. ⏳ Implementar obtención de metadatos OG (vista previa) para URLs adjuntas en posts (realizar en backend/servidor al conectar con Supabase)
 
 ### Estado de la implementación de Supabase
 

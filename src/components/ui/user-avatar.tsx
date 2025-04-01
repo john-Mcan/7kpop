@@ -1,8 +1,11 @@
-import React from "react";
-import Link from "next/link";
+'use client';
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface UserAvatarProps {
-  text: string;
+  image?: string;
+  name?: string;
+  text?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   username?: string;
   linkToProfile?: boolean;
@@ -10,14 +13,28 @@ interface UserAvatarProps {
   className?: string;
 }
 
-const UserAvatar: React.FC<UserAvatarProps> = ({
-  text,
+export default function UserAvatar({ 
+  image, 
+  name, 
+  text, 
   size = 'md',
   username,
-  linkToProfile = false,
-  colorClass = "from-purple-600 to-indigo-500",
+  linkToProfile,
+  colorClass = "from-purple-500 to-indigo-600",
   className = ""
-}) => {
+}: UserAvatarProps) {
+  // Usar nombre o texto para iniciales
+  const displayText = text || name;
+  
+  const initials = displayText
+    ? displayText
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2)
+    : "U";
+
   // Mapeo de tamaños a clases
   const sizeClasses = {
     sm: "w-7 h-7 text-xs",
@@ -27,30 +44,15 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     full: "w-full h-full text-xl"
   };
   
-  // Combinamos las clases de manera manual
-  const avatarClasses = `
-    ${sizeClasses[size] || sizeClasses.md} 
-    rounded-full bg-gradient-to-r 
-    ${colorClass} 
-    text-white flex items-center justify-center font-medium flex-shrink-0 
-    ${className}
-  `;
+  // Combinar clases según el tamaño
+  const combinedClassName = `${sizeClasses[size] || ""} ${className}`;
 
-  const avatarContent = (
-    <div className={avatarClasses.replace(/\s+/g, ' ').trim()}>
-      {text.charAt(0).toUpperCase()}
-    </div>
+  return (
+    <Avatar className={combinedClassName}>
+      {image && <AvatarImage src={image} alt={name || initials} />}
+      <AvatarFallback className={`bg-gradient-to-br ${colorClass} text-white`}>
+        {initials}
+      </AvatarFallback>
+    </Avatar>
   );
-
-  if (linkToProfile && username) {
-    return (
-      <Link href={`/perfil/${username}`}>
-        {avatarContent}
-      </Link>
-    );
-  }
-
-  return avatarContent;
-};
-
-export default UserAvatar; 
+} 

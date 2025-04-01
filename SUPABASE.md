@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS public.fandom_requests (
   fandom_id UUID REFERENCES public.fandoms(id) ON DELETE SET NULL
 );
 
--- Tabla de publicaciones
+-- Tabla de publicaciones (Actualizada con campos para media y URL externa)
 CREATE TABLE IF NOT EXISTS public.posts (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   title TEXT NOT NULL,
@@ -140,6 +140,11 @@ CREATE TABLE IF NOT EXISTS public.posts (
   fandom_id UUID REFERENCES public.fandoms(id) ON DELETE CASCADE,
   upvotes INTEGER DEFAULT 0,
   downvotes INTEGER DEFAULT 0,
+  image_urls TEXT[],                 -- Array para URLs de imágenes subidas
+  video_url TEXT,                    -- URL del video subido
+  link_url TEXT,                     -- URL externa proporcionada por el usuario
+  slug TEXT,                         -- Slug generado para la URL amigable
+  internal_path TEXT,                -- Ruta interna generada (ej. /fandoms/slug/posts/slug)
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -428,6 +433,61 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 CREATE TRIGGER comment_notification_trigger
 AFTER INSERT ON public.comments
 FOR EACH ROW EXECUTE PROCEDURE create_reply_notification();
+
+-- (NUEVO) Función y Trigger para generar slug y ruta interna del post
+CREATE OR REPLACE FUNCTION public.generate_post_slug_and_path()
+RETURNS TRIGGER AS $$
+DECLARE
+  base_slug TEXT;
+  final_slug TEXT;
+  fandom_record_slug TEXT;
+  counter INTEGER := 1;
+BEGIN
+  -- Crear slug básico desde el título
+  base_slug := lower(regexp_replace(NEW.title, '[^a-zA-Z0-9\s-]', '', 'g'));
+  base_slug := trim(regexp_replace(base_slug, '\s+', '-', 'g'));
+
+  -- Si el slug base queda vacío, usar UUID del post
+  IF base_slug = '' THEN
+     base_slug := NEW.id::text;
+  END IF;
+
+  -- Asignar el slug inicial
+  final_slug := base_slug;
+
+  -- Verificar si el slug ya existe para este fandom y añadir contador si es necesario
+  WHILE EXISTS(
+    SELECT 1 FROM public.posts
+    WHERE slug = final_slug AND fandom_id = NEW.fandom_id AND id != NEW.id
+  ) LOOP
+    final_slug := base_slug || '-' || counter;
+    counter := counter + 1;
+  END LOOP;
+
+  -- Asignar el slug final generado
+  NEW.slug := final_slug;
+
+  -- Construir la ruta interna ('internal_path')
+  SELECT f.slug INTO fandom_record_slug FROM public.fandoms f WHERE f.id = NEW.fandom_id;
+
+  -- Asignar NULL si no se encuentra el slug del fandom
+  IF fandom_record_slug IS NULL THEN
+    NEW.internal_path := NULL;
+  ELSE
+    NEW.internal_path := '/fandoms/' || fandom_record_slug || '/posts/' || final_slug;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE SECURITY INVOKER SET search_path = public;
+
+-- Trigger para generar slug y ruta interna
+-- Asegurarse de eliminar cualquier trigger viejo llamado 'set_post_slug' antes
+DROP TRIGGER IF EXISTS set_post_slug ON public.posts;
+CREATE TRIGGER set_post_slug_and_path
+BEFORE INSERT OR UPDATE OF title ON public.posts
+FOR EACH ROW
+EXECUTE FUNCTION public.generate_post_slug_and_path();
 
 ## 5. Políticas de seguridad (RLS)
 
@@ -877,9 +937,46 @@ CREATE POLICY "Usuarios pueden eliminar su voto" ON public.votos
       AND v.end_date >= NOW()
     )
   );
+
+-- (NUEVO) Políticas para Supabase Storage (Bucket: posts.media)
+-- Asumiendo que el bucket se llama 'posts.media'
+
+-- Permitir lectura pública de archivos
+CREATE POLICY "Permitir lectura pública de medios de posts" 
+ON storage.objects FOR SELECT
+TO anon, authenticated
+USING ( bucket_id = 'posts.media' );
+
+-- Permitir subida a usuarios autenticados
+CREATE POLICY "Permitir subida de medios a usuarios autenticados"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK ( bucket_id = 'posts.media' AND auth.role() = 'authenticated' );
+
+-- Permitir actualizar solo al propietario
+CREATE POLICY "Permitir al propietario actualizar sus archivos"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING ( bucket_id = 'posts.media' AND auth.uid() = owner );
+
+-- Permitir eliminar solo al propietario
+CREATE POLICY "Permitir al propietario eliminar sus archivos"
+ON storage.objects FOR DELETE
+TO authenticated
+USING ( bucket_id = 'posts.media' AND auth.uid() = owner );
+
 ```
 
-## 6. Pruebas
+## 6. Configuración de Supabase Storage
+
+Antes de que la subida de archivos funcione desde la aplicación, necesitas configurar Supabase Storage:
+
+1.  **Crear Bucket:** Ve a tu proyecto de Supabase -> Storage -> "Create a new bucket".
+    *   **Nombre:** `posts.media` (¡Importante que coincida con el usado en las políticas!)
+    *   **Acceso Público:** Marca esta casilla para simplificar la lectura pública.
+2.  **Revisar Políticas:** Aunque el SQL anterior crea las políticas necesarias, puedes ir a Storage -> seleccionar el bucket `posts.media` -> pestaña "Policies" para verificar que las políticas para SELECT, INSERT, UPDATE y DELETE estén activas y correctas.
+
+## 7. Pruebas
 
 Una vez configurado, puedes probar la autenticación navegando a:
 
@@ -895,7 +992,7 @@ SET role = 'admin'
 WHERE id = 'USER_ID_AQUÍ';
 ```
 
-## Recursos adicionales
+## 8. Recursos adicionales
 
 - [Documentación oficial de Supabase](https://supabase.com/docs)
 - [Guía de autenticación de Next.js con Supabase](https://supabase.com/docs/guides/auth/quickstarts/nextjs)

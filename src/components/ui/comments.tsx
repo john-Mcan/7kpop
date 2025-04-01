@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { MessageSquare, Send, ThumbsUp, ThumbsDown, MoreVertical, X } from "lucide-react";
+import { MessageSquare, Send, ThumbsUp, ThumbsDown, MoreVertical, X, Reply } from "lucide-react";
 import Link from "next/link";
 import { useDeviceDetect } from "@/lib/hooks/useDeviceDetect";
 import UserAvatar from "./user-avatar";
@@ -28,7 +28,7 @@ interface Comment {
 
 interface CommentsProps {
   postId: number;
-  commentsCount: number;
+  commentsCount?: number;
   initialComments?: Comment[];
   hideButton?: boolean;
   forceShowComments?: boolean;
@@ -191,7 +191,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
       <div className="flex gap-2">
         <div className="w-8 h-8 flex-shrink-0">
           <UserAvatar
-            text={comment.author.avatar || comment.author.username}
+            name={comment.author.username}
             username={comment.author.username}
             linkToProfile={true}
             size="full"
@@ -230,7 +230,8 @@ const CommentsComponent: React.FC<CommentsProps> = ({
               onClick={() => handleReplyClick(comment)}
               className="text-xs text-gray-500 hover:text-purple-700 hover:bg-transparent p-0 h-auto ml-2"
             >
-              Responder
+              <Reply size={14} className="mr-1" />
+              <span>Responder</span>
             </Button>
           </div>
           
@@ -251,7 +252,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     <div className="flex items-start gap-2 mt-3 ml-8 pl-4 border-l-2 border-gray-100">
       <div className="w-7 h-7 flex-shrink-0">
         <UserAvatar 
-          text="U"
+          name="Usuario"
           size="full"
         />
       </div>
@@ -292,7 +293,7 @@ const CommentsComponent: React.FC<CommentsProps> = ({
     <div className="flex items-start gap-3 mt-4">
       <div className="w-8 h-8 flex-shrink-0">
         <UserAvatar 
-          text="U"
+          name="Usuario"
           size="full"
         />
       </div>

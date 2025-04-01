@@ -12,7 +12,11 @@ import { FandomAvatar } from "@/components/ui/fandom-avatar";
 import { FandomBanner } from "@/components/ui/fandom-banner";
 import { getFandomBySlug, getFandomById } from "@/lib/data/fandoms";
 import Link from "next/link";
-import { Image, Video, MapPin, X } from "lucide-react";
+import { Image, Video, Link as LinkIcon, X } from "lucide-react";
+// Necesitarás importar el cliente de Supabase
+// import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+// Asume que tienes acceso al ID del usuario actual (ej. desde un hook o contexto)
+// import { useUser } from '@/hooks/useUser'; // Ejemplo
 
 interface FandomPageProps {
   params: {
@@ -100,11 +104,11 @@ export default function FandomPage({ params }: FandomPageProps) {
   // Estado para el video
   const [videoFile, setVideoFile] = useState<File | null>(null);
 
-  // Estado para la ubicación
-  const [location, setLocation] = useState("");
+  // Cambiar estado de ubicación a URL
+  const [urlLink, setUrlLink] = useState("");
 
-  // Estado para mostrar el input de ubicación
-  const [showLocationInput, setShowLocationInput] = useState(false);
+  // Cambiar estado para mostrar input de ubicación a URL
+  const [showUrlInput, setShowUrlInput] = useState(false);
   
   // Estado para mostrar el formulario de creación de post
   const [showPostForm, setShowPostForm] = useState(false);
@@ -160,43 +164,158 @@ export default function FandomPage({ params }: FandomPageProps) {
     videoInputRef.current?.click();
   };
 
-  // Función para manejar el clic en el botón de ubicación
-  const handleLocationClick = () => {
-    setShowLocationInput(!showLocationInput);
-    if (!showLocationInput) {
-      // Si tenemos acceso a la API de geolocalización, podríamos usarla aquí
-      // navigator.geolocation.getCurrentPosition(...)
+  // Cambiar nombre y lógica para manejar clic en botón de URL
+  const handleUrlClick = () => {
+    setShowUrlInput(!showUrlInput);
+    // No necesitamos geolocalización aquí
+  };
+
+  // Cambiar nombre y lógica para manejar cambio en input de URL
+  const handleUrlChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setUrlLink(e.target.value);
+  };
+
+  // Estado para indicar carga mientras se publica
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  // Cliente Supabase (inicializar fuera o dentro según tu setup)
+  // const supabase = createClientComponentClient(); 
+  // const { user } = useUser(); // Ejemplo para obtener el usuario
+
+  // Función para manejar la publicación del post (actualizada)
+  const handlePublish = async () => { // Marcar como async
+    // Obtener el ID del usuario actual (¡necesitarás implementarlo!)
+    const currentUserId = null; // Reemplazar con la lógica real para obtener el ID del usuario
+    // const currentUserId = user?.id; 
+
+    // Obtener el ID del fandom actual
+    const currentFandomId = fandomInfo?.id; // Asumiendo que fandomInfo contiene el ID correcto
+
+    if (!currentUserId || !currentFandomId) {
+      console.error("Error: No se pudo obtener el ID del usuario o del fandom.");
+      // Mostrar error al usuario
+      return;
+    }
+
+    // Validar que canPublish sea verdadero antes de continuar
+    if (!canPublish) {
+        console.warn("Intento de publicar con datos incompletos.")
+        return; 
+    }
+
+    setIsPublishing(true); // Indicar inicio de publicación
+
+    let uploadedImageUrls: string[] = [];
+    let uploadedVideoUrl: string | null = null;
+
+    try {
+      // 1. Subir imágenes (si existen)
+      if (imageFiles.length > 0) {
+        const uploadPromises = imageFiles.map(async (file) => {
+          const fileName = `${currentUserId}/${Date.now()}_${file.name}`;
+          const filePath = `public/post_media/${fileName}`;
+          
+          // Placeholder: Lógica de subida real con Supabase Storage
+          /*
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('post_media') // Nombre de tu bucket
+            .upload(filePath, file);
+
+          if (uploadError) {
+            throw new Error(`Error subiendo imagen ${file.name}: ${uploadError.message}`);
+          }
+          
+          // Obtener URL pública
+          const { data: urlData } = supabase.storage
+            .from('post_media')
+            .getPublicUrl(filePath);
+            
+          return urlData.publicUrl;
+          */
+         console.log(`Placeholder: Subiendo imagen ${filePath}`);
+         return `https://placeholder.com/storage/post_media/${fileName}`; // URL Placeholder
+        });
+        uploadedImageUrls = await Promise.all(uploadPromises);
+      }
+
+      // 2. Subir video (si existe)
+      if (videoFile) {
+        const fileName = `${currentUserId}/${Date.now()}_${videoFile.name}`;
+        const filePath = `public/post_media/${fileName}`;
+
+        // Placeholder: Lógica de subida real con Supabase Storage
+        /*
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('post_media')
+          .upload(filePath, videoFile);
+
+        if (uploadError) {
+          throw new Error(`Error subiendo video: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('post_media')
+          .getPublicUrl(filePath);
+          
+uploadedVideoUrl = urlData.publicUrl;
+        */
+        console.log(`Placeholder: Subiendo video ${filePath}`);
+        uploadedVideoUrl = `https://placeholder.com/storage/post_media/${fileName}`; // URL Placeholder
+      }
+
+      // 3. Preparar datos para insertar en la tabla 'posts'
+      const postDataToInsert = {
+        title: postTitle,
+        content: postText,
+        user_id: currentUserId,
+        fandom_id: currentFandomId,
+        image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null, // Usar array o null
+        video_url: uploadedVideoUrl,
+        link_url: urlLink.trim() !== "" ? urlLink.trim() : null, // Usar link_url o null
+        // 'slug' y 'internal_path' se generan por el trigger
+        // 'upvotes' y 'downvotes' tienen default 0
+      };
+
+      console.log("Datos a insertar en tabla 'posts':", postDataToInsert);
+
+      // 4. Insertar en la base de datos
+      // Placeholder: Lógica de inserción real con Supabase
+      /*
+      const { data: insertedPost, error: insertError } = await supabase
+        .from('posts')
+        .insert([postDataToInsert])
+        .select(); // Opcional: devolver el post insertado
+
+      if (insertError) {
+        throw new Error(`Error insertando post: ${insertError.message}`);
+      }
+
+      console.log("Post insertado con éxito:", insertedPost);
+      */
+      console.log("Placeholder: Insertando post en DB...")
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simular delay de red
+
+      // 5. Reiniciar formulario (solo si todo fue exitoso)
+      setPostTitle("");
+      setPostText("");
+      setImageFiles([]);
+      setVideoFile(null);
+      setUrlLink(""); 
+      setShowUrlInput(false); 
+      setShowPostForm(false); 
+      // Aquí podrías añadir lógica para refrescar el feed de posts
+
+    } catch (error) {
+      console.error("Error al publicar el post:", error);
+      // Mostrar un mensaje de error al usuario (ej. usando un toast)
+    } finally {
+      setIsPublishing(false); // Indicar fin de publicación (éxito o fallo)
     }
   };
 
-  // Función para manejar el cambio en la ubicación
-  const handleLocationChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setLocation(e.target.value);
-  };
-
-  // Función para manejar la publicación del post
-  const handlePublish = () => {
-    // Implementa la lógica para publicar el post aquí
-    console.log("Publicando post:", {
-      title: postTitle,
-      text: postText,
-      images: imageFiles,
-      video: videoFile,
-      location: location
-    });
-    
-    // Reiniciar el formulario
-    setPostTitle("");
-    setPostText("");
-    setImageFiles([]);
-    setVideoFile(null);
-    setLocation("");
-    setShowLocationInput(false);
-    setShowPostForm(false);
-  };
-
   // Función para determinar si se puede publicar el post
-  const canPublish = postTitle.trim() !== "" && (postText.trim() !== "" || imageFiles.length > 0 || videoFile || location.trim() !== "");
+  // Actualizar la condición para usar urlLink
+  const canPublish = postTitle.trim() !== "" && (postText.trim() !== "" || imageFiles.length > 0 || videoFile || urlLink.trim() !== "");
 
   return (
     <>
@@ -462,15 +581,15 @@ export default function FandomPage({ params }: FandomPageProps) {
                           </div>
                         )}
                         
-                        {/* Input de ubicación */}
-                        {showLocationInput && (
+                        {/* Input de URL (reemplaza ubicación) */}
+                        {showUrlInput && (
                           <div className="mt-3">
                             <input
                               type="text"
-                              placeholder="Agregar ubicación..."
+                              placeholder="Pegar enlace externo... (YouTube, web, etc.)" // Actualizar placeholder
                               className="w-full py-2 px-3 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-purple-200 focus:border-purple-400 transition-all"
-                              value={location}
-                              onChange={handleLocationChange}
+                              value={urlLink} // Usar urlLink
+                              onChange={handleUrlChange} // Usar handleUrlChange
                             />
                           </div>
                         )}
@@ -498,6 +617,7 @@ export default function FandomPage({ params }: FandomPageProps) {
                               className={`p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5 ${videoFile ? 'opacity-50 cursor-not-allowed' : ''}`}
                               onClick={handleImageClick}
                               disabled={!!videoFile}
+                              title="Adjuntar imagen"
                             >
                               <Image size={18} />
                               <span className="text-xs font-medium hidden sm:inline">Imagen</span>
@@ -506,24 +626,26 @@ export default function FandomPage({ params }: FandomPageProps) {
                               className={`p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5 ${imageFiles.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                               onClick={handleVideoClick}
                               disabled={imageFiles.length > 0}
+                              title="Adjuntar archivo de video"
                             >
                               <Video size={18} />
                               <span className="text-xs font-medium hidden sm:inline">Video</span>
                             </button>
                             <button 
-                              className={`p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5 ${showLocationInput ? 'text-purple-600 bg-purple-50' : ''}`}
-                              onClick={handleLocationClick}
+                              className={`p-2.5 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1.5 ${showUrlInput ? 'text-purple-600 bg-purple-50' : ''}`}
+                              onClick={handleUrlClick}
+                              title="Adjuntar enlace externo"
                             >
-                              <MapPin size={18} />
-                              <span className="text-xs font-medium hidden sm:inline">Ubicación</span>
+                              <LinkIcon size={18} />
+                              <span className="text-xs font-medium hidden sm:inline">URL</span>
                             </button>
                           </div>
                           <Button 
                             className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-medium shadow-sm hover:shadow hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={handlePublish}
-                            disabled={!canPublish}
+                            disabled={!canPublish || isPublishing}
                           >
-                            Publicar
+                            {isPublishing ? 'Publicando...' : 'Publicar'}
                           </Button>
                         </div>
                       </>
