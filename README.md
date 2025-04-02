@@ -10,6 +10,7 @@ fanverse es una plataforma moderna y dinámica diseñada para conectar a fans de
 - **Comentarios y votos**: Interacciones con el contenido y otros usuarios
 - **Sistema de mensajes y notificaciones**: Comunicación entre usuarios y alertas sobre actividad relevante
 - **Diseño responsivo**: Experiencia optimizada para dispositivos móviles y de escritorio
+- **Sistema de moderación**: Panel completo para administradores y moderadores que permite gestionar reportes, solicitudes de fandom y miembros
 
 ## Tecnologías utilizadas
 
@@ -38,6 +39,7 @@ El proyecto tiene implementado:
   - Mis Fandoms (fandoms seguidos y recomendados)
   - Detalle de Fandom (perfil completo con publicaciones)
   - Vista individual de post (con comentarios, sistema para compartir y reportar)
+  - Página de moderación con panel para administradores y moderadores
 - **Sistema de Fandoms**:
   - Exploración de comunidades
   - Estructura de datos para fandoms
@@ -45,20 +47,31 @@ El proyecto tiene implementado:
   - Perfil detallado de cada fandom
   - Vista de publicaciones específicas de un fandom
   - Componente mejorado para crear publicaciones
+  - Sistema de solicitud y aprobación de fandoms
 - **Sistema de Posts**:
   - Feed de posts con vista de tarjeta
   - Vista individual de post completo
   - Sistema de votación (upvote/downvote)
   - Funcionalidad para compartir en redes sociales
   - Sistema para reportar contenido inapropiado
+  - Moderación de publicaciones
 - **Sistema de Comentarios**:
   - Visualización de comentarios en posts
   - Respuestas anidadas a comentarios
   - Votación en comentarios
+  - Reportes de comentarios inapropiados
 - **Sistema de Mensajes y Notificaciones**:
   - Interfaz para visualizar conversaciones
   - Sistema de notificaciones
   - Indicadores de mensajes no leídos
+- **Sistema de Moderación**:
+  - Panel de administración completo
+  - Panel de moderación para fandoms específicos
+  - Gestión de reportes de contenido
+  - Gestión de reportes de usuarios
+  - Aprobación/rechazo de solicitudes de fandom
+  - Asignación de moderadores a fandoms
+  - Gestión de miembros en fandoms (silenciar/banear)
 - **Diseño responsivo**: Adaptación para móviles y escritorio
 
 ## Cómo ejecutar localmente
@@ -92,6 +105,7 @@ fanverse/
 │   │   ├── explorar/        # Ruta de exploración
 │   │   ├── perfil/          # Ruta de perfil de usuario
 │   │   ├── mensajes/        # Sistema de mensajes y notificaciones
+│   │   ├── moderacion/      # Panel de moderación para admins y mods
 │   │   ├── fandoms/         # Listado de fandoms disponibles
 │   │   │   └── [id]/        # Detalle de fandom específico
 │   │   └── mis-fandoms/     # Fandoms seguidos por el usuario
@@ -100,6 +114,10 @@ fanverse/
 │   │   │   ├── share-post.tsx    # Componente para compartir posts
 │   │   │   ├── report-post.tsx   # Componente para reportar posts
 │   │   │   └── comments.tsx      # Componente de comentarios
+│   │   ├── admin/            # Componentes para el panel de administración
+│   │   │   ├── admin-dashboard.tsx  # Panel principal de administración
+│   │   │   ├── moderator-dashboard.tsx # Panel para moderadores
+│   │   │   └── panels/      # Paneles específicos de moderación
 │   │   ├── navigation-sidebar.tsx  # Navegación lateral
 │   │   ├── mobile-nav.tsx   # Navegación móvil
 │   │   ├── post-feed.tsx    # Feed de publicaciones
@@ -147,6 +165,7 @@ fanverse/
 5. ⏳ Conectar los componentes de UI con Supabase
 6. ⏳ Implementar sistema de notificaciones en tiempo real
 7. ⏳ Implementar obtención de metadatos OG (vista previa) para URLs adjuntas en posts (realizar en backend/servidor al conectar con Supabase)
+8. ✅ Implementar panel de moderación para administradores y moderadores
 
 ### Estado de la implementación de Supabase
 
@@ -158,6 +177,9 @@ Ya se ha configurado Supabase como backend para la aplicación, incluyendo:
   - Fandoms con categorización y sistema de moderación
   - Publicaciones, comentarios, votos y reacciones
   - Sistema de notificaciones y mensajería
+  - Reportes de contenido y usuarios
+  - Solicitudes de creación de fandoms
+  - Moderadores de fandoms
 - **Seguridad**: Políticas de Row Level Security (RLS) configuradas para todas las tablas
 - **Middlewares**: Configuración para gestión de sesiones y autenticación
 - **Sistema de Mensajes**: Vista para lista de conversaciones y triggers para notificaciones de mensajes nuevos
@@ -165,12 +187,23 @@ Ya se ha configurado Supabase como backend para la aplicación, incluyendo:
 - **Optimización**: Índices mejorados para búsquedas y funciones para paginación eficiente
 - **Tiempo Real**: Configuración de canales para actualizaciones en tiempo real de mensajes y notificaciones
 - **Seguridad Avanzada**: Correcciones en funciones y vistas para asegurar un funcionamiento seguro
+- **Sistema de Moderación**: Tablas, políticas y funciones para el sistema completo de moderación (ver SUPABASE3.md)
 
-Ver archivo `SUPABASE.md` para la documentación completa sobre la configuración de Supabase.
+Ver archivos `SUPABASE.md` y `SUPABASE3.md` para la documentación completa sobre la configuración de Supabase.
 
 ## Cambios recientes
 
-### Última actualización (Mayo 2023)
+### Última actualización (Junio 2023)
+- Implementación completa del sistema de moderación con paneles para administradores y moderadores
+- Creación de la página de moderación con verificación de permisos
+- Desarrollo de paneles específicos para gestión de fandoms pendientes, reportes y moderadores
+- Implementación de funcionalidades de moderación de miembros (silenciar/banear)
+- Configuración de políticas RLS para asegurar permisos de moderación
+- Optimización de consultas para el panel de administración y moderación
+- Actualización de la estructura de base de datos con nuevas tablas para moderación
+- Corrección de errores y mejoras de tipado en los componentes administrativos
+
+### Actualización anterior (Mayo 2023)
 - Implementación de vista individual de posts con sistema completo de comentarios
 - Creación de componentes reutilizables para compartir y reportar posts
 - Mejora en la jerarquía visual de las tarjetas de posts en el feed

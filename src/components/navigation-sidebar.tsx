@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Home, Search, MessageSquare, Users, User, LogOut } from "lucide-react";
+import { Home, Search, MessageSquare, Users, User, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import UserAvatar from "./ui/user-avatar";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 // Componente para un ítem de navegación
 interface NavItemProps {
@@ -33,6 +35,39 @@ const NavigationSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading, signOut } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  
+  // Verificar si el usuario es admin o moderador
+  useEffect(() => {
+    const checkUserRoles = async () => {
+      if (!user) return;
+
+      try {
+        // Verificar si es administrador
+        const { data: adminData, error: adminError } = await supabase
+          .rpc('is_admin');
+
+        if (adminError) throw adminError;
+        setIsAdmin(!!adminData);
+
+        if (!adminData) {
+          // Verificar si es moderador de algún fandom
+          const { data: modData, error: modError } = await supabase
+            .from('fandom_moderators')
+            .select('fandom_id')
+            .eq('user_id', user.id);
+
+          if (modError) throw modError;
+          setIsModerator(modData && modData.length > 0);
+        }
+      } catch (error) {
+        console.error('Error al verificar roles:', error);
+      }
+    };
+
+    checkUserRoles();
+  }, [user]);
   
   const navItems = [
     { name: "Inicio", href: "/", icon: Home },
@@ -41,6 +76,11 @@ const NavigationSidebar = () => {
     { name: "Mensajes", href: "/mensajes", icon: MessageSquare },
     { name: "Perfil", href: "/perfil", icon: User },
   ];
+
+  // Añadir el enlace de moderación si el usuario es admin o moderador
+  if ((isAdmin || isModerator) && user) {
+    navItems.push({ name: "Moderación", href: "/moderacion", icon: Shield });
+  }
 
   const handleSignOut = async () => {
     try {

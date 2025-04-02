@@ -1654,3 +1654,115 @@ CREATE INDEX idx_notifications_is_read ON public.notifications(user_id, is_read)
    - Siempre validar y limpiar los inputs para crear slugs.
    - Manejar casos donde los slugs podrían quedar vacíos o duplicados.
    - Verificar la existencia de referencias a otras tablas (como fandom_id) antes de construir URLs. 
+```
+
+## Actualización: Script seguro para verificar la tabla reports y sus políticas
+
+Para verificar y actualizar la estructura de reportes (reports) de manera segura sin generar errores, se puede utilizar el siguiente script SQL:
+
+```sql
+-- 1. Verificar y modificar la tabla reports si es necesario
+DO $$
+BEGIN
+    -- Verificar si la tabla reports existe
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'reports') THEN
+        -- La tabla existe, verificar/añadir columnas si es necesario
+        
+        -- Verificar si la columna reporter_id existe
+        IF NOT EXISTS (SELECT FROM pg_attribute 
+                      WHERE attrelid = 'public.reports'::regclass 
+                      AND attname = 'reporter_id' 
+                      AND NOT attisdropped) THEN
+            ALTER TABLE public.reports 
+            ADD COLUMN reporter_id UUID REFERENCES auth.users(id) ON DELETE SET NULL NOT NULL;
+        END IF;
+        
+        -- Verificar fandom_id
+        IF NOT EXISTS (SELECT FROM pg_attribute 
+                      WHERE attrelid = 'public.reports'::regclass 
+                      AND attname = 'fandom_id' 
+                      AND NOT attisdropped) THEN
+            ALTER TABLE public.reports 
+            ADD COLUMN fandom_id UUID REFERENCES public.fandoms(id) ON DELETE CASCADE;
+        END IF;
+        
+    ELSE
+        -- La tabla no existe, crearla completa
+        CREATE TABLE public.reports (
+          id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+          reporter_id UUID REFERENCES auth.users(id) ON DELETE SET NULL NOT NULL,
+          reason TEXT NOT NULL,
+          post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE,
+          comment_id UUID REFERENCES public.comments(id) ON DELETE CASCADE,
+          status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'accepted', 'rejected')),
+          fandom_id UUID REFERENCES public.fandoms(id) ON DELETE CASCADE NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+          reviewed_at TIMESTAMP WITH TIME ZONE,
+          reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+          CONSTRAINT one_item_only CHECK (
+            (post_id IS NOT NULL AND comment_id IS NULL) OR
+            (comment_id IS NOT NULL AND post_id IS NULL)
+          )
+        );
+        
+        -- Habilitar RLS
+        ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+    END IF;
+END
+$$;
+
+-- 2. Verificar y crear políticas solo si no existen
+DO $$
+BEGIN
+    -- Verificar política para insertar reportes
+    IF NOT EXISTS (
+        SELECT FROM pg_policies 
+        WHERE tablename = 'reports' 
+        AND policyname = 'Usuarios pueden reportar contenido'
+    ) THEN
+        CREATE POLICY "Usuarios pueden reportar contenido" ON public.reports
+          FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+    END IF;
+    
+    -- Verificar política para moderadores
+    IF NOT EXISTS (
+        SELECT FROM pg_policies 
+        WHERE tablename = 'reports' 
+        AND policyname = 'Moderadores pueden ver reportes de su fandom'
+    ) THEN
+        CREATE POLICY "Moderadores pueden ver reportes de su fandom" ON public.reports
+          FOR SELECT USING (public.is_fandom_moderator(fandom_id));
+    END IF;
+    
+    -- Verificar política para administradores
+    IF NOT EXISTS (
+        SELECT FROM pg_policies 
+        WHERE tablename = 'reports' 
+        AND policyname = 'Administradores pueden ver todos los reportes'
+    ) THEN
+        CREATE POLICY "Administradores pueden ver todos los reportes" ON public.reports
+          FOR SELECT USING (public.is_admin());
+    END IF;
+    
+    -- Verificar políticas para actualizar reportes
+    IF NOT EXISTS (
+        SELECT FROM pg_policies 
+        WHERE tablename = 'reports' 
+        AND policyname = 'Moderadores pueden procesar reportes de su fandom'
+    ) THEN
+        CREATE POLICY "Moderadores pueden procesar reportes de su fandom" ON public.reports
+          FOR UPDATE USING (public.is_fandom_moderator(fandom_id));
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT FROM pg_policies 
+        WHERE tablename = 'reports' 
+        AND policyname = 'Administradores pueden procesar cualquier reporte'
+    ) THEN
+        CREATE POLICY "Administradores pueden procesar cualquier reporte" ON public.reports
+          FOR UPDATE USING (public.is_admin());
+    END IF;
+END
+$$;
+```
+Este script verifica la existencia de la tabla y sus políticas antes de intentar crearlas, lo que evita errores cuando se ejecuta más de una vez. Utiliza bloques PL/pgSQL `DO` para agrupar lógicamente las operaciones. 

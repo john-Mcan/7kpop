@@ -8,7 +8,9 @@ import {
   AlertTriangle,
   Ban,
   ShieldAlert,
-  Info
+  Info,
+  Loader2,
+  CheckCircle
 } from "lucide-react";
 
 type ReportPostProps = {
@@ -16,12 +18,15 @@ type ReportPostProps = {
   postSlug?: string;
   isShareOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
+  commentId?: number;
 };
 
-const ReportPost = ({ postId, postSlug, isShareOpen = false, onOpenChange }: ReportPostProps) => {
+const ReportPost = ({ postId, postSlug, isShareOpen = false, onOpenChange, commentId }: ReportPostProps) => {
   const [showReportOptions, setShowReportOptions] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [reportReason, setReportReason] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Cerrar este modal si el modal de compartir está abierto
   useEffect(() => {
@@ -37,22 +42,65 @@ const ReportPost = ({ postId, postSlug, isShareOpen = false, onOpenChange }: Rep
     { id: 'other', label: 'Otro motivo', icon: <Info size={16} /> }
   ];
   
-  const handleReport = (reason: string) => {
-    // Simulación de envío de reporte
-    console.log(`Reportando publicación ${postId} por: ${reason}`);
-    setReportReason(reason);
-    setReportSent(true);
-    
-    // Reset después de 3 segundos
-    setTimeout(() => {
-      setShowReportOptions(false);
-      setReportSent(false);
-      setReportReason(null);
-      // Notificar al componente padre que se cerró
-      if (onOpenChange) {
-        onOpenChange(false);
+  const handleReport = async (reason: string) => {
+    setIsLoading(true);
+    setError(null);
+    setReportSent(false);
+
+    try {
+      // --- Enviar reporte a la API ---
+      const response = await fetch('/api/report', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId: commentId ? undefined : postId,  // Si hay commentId, no enviamos postId
+          commentId: commentId || undefined,       // Enviamos commentId si existe
+          reason,
+        }),
+      });
+
+      if (!response.ok) {
+        // Intentar obtener un mensaje de error del backend si existe
+        let errorMessage = 'No se pudo enviar el reporte. Inténtalo de nuevo.';
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+        throw new Error(errorMessage);
       }
-    }, 3000);
+
+      // --- Éxito ---
+      console.log(`Reporte enviado para ${commentId ? 'comentario' : 'publicación'} por: ${reason}`);
+      setReportReason(reason);
+      setReportSent(true);
+      
+      // Reset después de 3 segundos
+      setTimeout(() => {
+        setShowReportOptions(false);
+        setReportSent(false);
+        setReportReason(null);
+        // Notificar al componente padre que se cerró
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
+      }, 3000);
+
+    } catch (err: any) {
+      setError(err.message || 'Ocurrió un error inesperado.');
+      console.error("Error al reportar:", err);
+      // Mantener el modal abierto para mostrar el error por 5 segundos
+      setTimeout(() => {
+        setError(null); 
+      }, 5000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleToggleOptions = () => {
@@ -90,26 +138,46 @@ const ReportPost = ({ postId, postSlug, isShareOpen = false, onOpenChange }: Rep
             </Button>
           </div>
           
-          {reportSent ? (
+          {/* Estado de Carga */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-4 text-gray-600">
+              <Loader2 size={20} className="animate-spin mr-2" />
+              <p className="text-sm">Enviando reporte...</p>
+            </div>
+          )}
+
+          {/* Estado de Éxito */}
+          {!isLoading && reportSent && !error && (
             <div className="text-center py-2">
               <div className="text-green-600 mb-2">
-                <svg className="mx-auto h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <CheckCircle className="mx-auto h-8 w-8" />
               </div>
-              <p className="text-sm text-gray-700">Gracias por reportar. Revisaremos esta publicación.</p>
+              <p className="text-sm text-gray-700">¡Gracias! Tu reporte ha sido enviado.</p>
+              <p className="text-xs text-gray-500 mt-1">Revisaremos esta publicación pronto.</p>
             </div>
-          ) : (
+          )}
+
+          {/* Estado de Error */}
+          {!isLoading && error && (
+            <div className="text-center py-2 px-2 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-700 font-medium">Error al reportar</p>
+              <p className="text-xs text-red-600 mt-1">{error}</p>
+            </div>
+          )}
+          
+          {/* Opciones de Reporte (solo si no está cargando, ni enviado con éxito, y sin error permanente) */}
+          {!isLoading && !reportSent && !error && (
             <div className="flex flex-col gap-2 mt-3">
               {reportOptions.map((option) => (
                 <Button 
                   key={option.id}
                   variant="outline" 
                   size="sm" 
-                  className="justify-start"
+                  className="justify-start text-gray-700 hover:bg-gray-50 hover:border-gray-300"
                   onClick={() => handleReport(option.id)}
+                  disabled={isLoading}
                 >
-                  <span className="mr-2 text-red-500">{option.icon}</span>
+                  <span className="mr-2 text-gray-500">{option.icon}</span>
                   {option.label}
                 </Button>
               ))}

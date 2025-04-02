@@ -1,58 +1,35 @@
 'use client';
 
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface UserAvatarProps {
-  image?: string;
-  name?: string;
+  src?: string | null;
   text?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
-  username?: string;
-  linkToProfile?: boolean;
-  colorClass?: string;
-  className?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function UserAvatar({ 
-  image, 
-  name, 
-  text, 
-  size = 'md',
-  username,
-  linkToProfile,
-  colorClass = "from-purple-500 to-indigo-600",
-  className = ""
-}: UserAvatarProps) {
-  // Usar nombre o texto para iniciales
-  const displayText = text || name;
-  
-  const initials = displayText
-    ? displayText
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2)
-    : "U";
+const sizeClasses = {
+  sm: "h-8 w-8 text-xs",
+  md: "h-10 w-10 text-sm",
+  lg: "h-12 w-12 text-md"
+};
 
-  // Mapeo de tamaños a clases
-  const sizeClasses = {
-    sm: "w-7 h-7 text-xs",
-    md: "w-8 h-8 text-xs",
-    lg: "w-10 h-10 text-sm",
-    xl: "w-14 h-14 text-base",
-    full: "w-full h-full text-xl"
+export default function UserAvatar({ src, text, size = 'md' }: UserAvatarProps) {
+  const getInitials = (text: string) => {
+    if (!text) return '';
+    return text.charAt(0).toUpperCase();
   };
-  
-  // Combinar clases según el tamaño
-  const combinedClassName = `${sizeClasses[size] || ""} ${className}`;
 
   return (
-    <Avatar className={combinedClassName}>
-      {image && <AvatarImage src={image} alt={name || initials} />}
-      <AvatarFallback className={`bg-gradient-to-br ${colorClass} text-white`}>
-        {initials}
-      </AvatarFallback>
+    <Avatar className={cn(sizeClasses[size])}>
+      {src ? (
+        <AvatarImage src={src} alt={text || "Avatar"} />
+      ) : (
+        <AvatarFallback className="bg-primary/10 text-primary">
+          {text ? getInitials(text) : '?'}
+        </AvatarFallback>
+      )}
     </Avatar>
   );
 } 
