@@ -4,6 +4,7 @@ import PostFeed from "@/components/post-feed";
 import MobileNav from "@/components/mobile-nav";
 import { Suspense } from "react";
 import HomePostHandler from "../components/home-post-handler";
+import GlobalSearchBar from "@/components/global-search-bar";
 
 export default function Home({
   searchParams,
@@ -42,19 +43,7 @@ export default function Home({
                       </div>
                     </div>
                     
-                    <div className="relative w-full">
-                      <input 
-                        type="search" 
-                        placeholder="Buscar fanverse..." 
-                        className="w-full py-2 px-4 pr-10 rounded-full border border-gray-200 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="11" cy="11" r="8"></circle>
-                          <path d="m21 21-4.3-4.3"></path>
-                        </svg>
-                      </div>
-                    </div>
+                    <GlobalSearchBar />
                   </div>
                   
                   <div className="mt-6">

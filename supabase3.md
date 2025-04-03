@@ -339,6 +339,125 @@ CREATE INDEX IF NOT EXISTS idx_reports_comment_id ON public.reports(comment_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post_id_user_id ON public.comments(post_id, user_id);
 ```
 
+## 5. Sistema de búsqueda
+
+```sql
+-- Tabla para historial de búsquedas de usuarios
+CREATE TABLE IF NOT EXISTS public.user_searches (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  query TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Índice para optimizar consultas
+CREATE INDEX idx_user_searches_user_id ON public.user_searches(user_id);
+CREATE INDEX idx_user_searches_created_at ON public.user_searches(created_at DESC);
+
+-- Habilitar RLS
+ALTER TABLE public.user_searches ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de seguridad
+CREATE POLICY "Usuarios pueden ver su historial de búsquedas" ON public.user_searches
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "Usuarios pueden crear registros de búsqueda" ON public.user_searches
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "Usuarios pueden eliminar su historial" ON public.user_searches
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Función para búsqueda general
+CREATE OR REPLACE FUNCTION public.search_content(
+  search_term TEXT,
+  limit_count INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  type TEXT,
+  id UUID,
+  title TEXT,
+  content TEXT,
+  author_id UUID,
+  author_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE,
+  fandom_id UUID,
+  fandom_name TEXT,
+  slug TEXT,
+  rank REAL
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  (
+    -- Posts
+    SELECT 
+      'post' as type,
+      p.id,
+      p.title,
+      p.content,
+      p.user_id as author_id,
+      pr.username as author_name,
+      p.created_at,
+      p.fandom_id,
+      f.name as fandom_name,
+      p.slug,
+      ts_rank(to_tsvector('spanish', p.title || ' ' || p.content), to_tsquery('spanish', search_term)) as rank
+    FROM public.posts p
+    JOIN public.profiles pr ON p.user_id = pr.id
+    JOIN public.fandoms f ON p.fandom_id = f.id
+    WHERE 
+      p.moderation_status = 'approved' AND
+      to_tsvector('spanish', p.title || ' ' || p.content) @@ to_tsquery('spanish', search_term)
+    ORDER BY rank DESC
+    LIMIT limit_count
+  )
+  UNION ALL
+  (
+    -- Usuarios
+    SELECT 
+      'user' as type,
+      p.id,
+      p.username as title,
+      p.bio as content,
+      p.id as author_id,
+      p.username as author_name,
+      p.created_at,
+      NULL as fandom_id,
+      NULL as fandom_name,
+      NULL as slug,
+      ts_rank(to_tsvector('spanish', p.username || ' ' || COALESCE(p.bio, '')), to_tsquery('spanish', search_term)) as rank
+    FROM public.profiles p
+    WHERE 
+      to_tsvector('spanish', p.username || ' ' || COALESCE(p.bio, '')) @@ to_tsquery('spanish', search_term)
+    ORDER BY rank DESC
+    LIMIT limit_count
+  )
+  UNION ALL
+  (
+    -- Fandoms
+    SELECT 
+      'fandom' as type,
+      f.id,
+      f.name as title,
+      f.description as content,
+      f.created_by as author_id,
+      pr.username as author_name,
+      f.created_at,
+      f.id as fandom_id,
+      f.name as fandom_name,
+      f.slug,
+      ts_rank(to_tsvector('spanish', f.name || ' ' || COALESCE(f.description, '')), to_tsquery('spanish', search_term)) as rank
+    FROM public.fandoms f
+    LEFT JOIN public.profiles pr ON f.created_by = pr.id
+    WHERE 
+      f.status = 'approved' AND
+      to_tsvector('spanish', f.name || ' ' || COALESCE(f.description, '')) @@ to_tsquery('spanish', search_term)
+    ORDER BY rank DESC
+    LIMIT limit_count
+  );
+END;
+$$;
+```
+
 ## Notas de implementación
 
 1. **Flujo de moderación para posts:**

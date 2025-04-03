@@ -122,7 +122,7 @@ const NavigationSidebar = () => {
               <div className="w-10 h-10 mr-3 flex-shrink-0">
                 <UserAvatar 
                   text={user.email?.charAt(0) || "U"}
-                  size="full"
+                  size="lg"
                 />
               </div>
               <div className="flex-1 overflow-hidden">

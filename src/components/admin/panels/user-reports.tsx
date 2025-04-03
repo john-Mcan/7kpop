@@ -26,6 +26,26 @@ interface UserReport {
   };
 }
 
+// Interfaz para la respuesta de Supabase
+interface ReportData {
+  id: string;
+  reason: string;
+  status: 'pending' | 'reviewed' | 'action_taken' | 'dismissed';
+  created_at: string;
+  reporter_id: string;
+  reported_user_id: string;
+  reporter: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+  };
+  reported_user: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+  };
+}
+
 export default function UserReportsPanel() {
   const [reports, setReports] = useState<UserReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,11 +60,11 @@ export default function UserReportsPanel() {
     try {
       setLoading(true);
       
+      // Modificamos la consulta para un formato más directo
       const { data, error } = await supabase
         .from('user_reports')
         .select(`
           id, reason, status, created_at,
-          reporter_id, reported_user_id,
           reporter:profiles!user_reports_reporter_id_fkey(id, username, avatar_url),
           reported_user:profiles!user_reports_reported_user_id_fkey(id, username, avatar_url)
         `)
@@ -53,23 +73,33 @@ export default function UserReportsPanel() {
 
       if (error) throw error;
       
+      if (!data) {
+        setReports([]);
+        return;
+      }
+      
       // Formatear datos para facilitar su uso
-      const formattedReports = data.map(report => ({
-        id: report.id,
-        reason: report.reason,
-        status: report.status,
-        created_at: report.created_at,
-        reporter: {
-          id: report.reporter.id,
-          username: report.reporter.username,
-          avatar_url: report.reporter.avatar_url
-        },
-        reported_user: {
-          id: report.reported_user.id,
-          username: report.reported_user.username,
-          avatar_url: report.reported_user.avatar_url
-        }
-      }));
+      const formattedReports: UserReport[] = data.map((report: any) => {
+        const reporterData = Array.isArray(report.reporter) ? report.reporter[0] : report.reporter;
+        const reportedUserData = Array.isArray(report.reported_user) ? report.reported_user[0] : report.reported_user;
+        
+        return {
+          id: report.id,
+          reason: report.reason,
+          status: report.status,
+          created_at: report.created_at,
+          reporter: {
+            id: reporterData?.id || '',
+            username: reporterData?.username || '',
+            avatar_url: reporterData?.avatar_url
+          },
+          reported_user: {
+            id: reportedUserData?.id || '',
+            username: reportedUserData?.username || '',
+            avatar_url: reportedUserData?.avatar_url
+          }
+        };
+      });
 
       setReports(formattedReports);
     } catch (error) {
