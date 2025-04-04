@@ -14,115 +14,128 @@ import { getFandomByName, getFandomById, getFandomBySlug, fandomsData } from "@/
 import SharePost from "./ui/share-post";
 import ReportPost from "./ui/report-post";
 import React from "react";
+import { supabase } from "@/lib/supabase/client";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 type Post = {
-  id: number;
-  slug?: string;
-  fandom: {
-    name: string;
-    avatar: string;
-  };
-  author: {
-    name: string;
-    username: string;
-    favoriteGroups: string[];
-  };
+  id: string;
   title: string;
   content: string;
-  image?: string;
-  video?: string;
-  url?: string;
-  votes: {
-    up: number;
-    down: number;
-  };
-  comments: number;
-  createdAt: string;
+  user_id: string;
+  fandom_id: string;
+  upvotes: number;
+  downvotes: number;
+  image_urls: string[] | null;
+  video_url: string | null;
+  link_url: string | null;
+  slug: string | null;
+  internal_path: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
+  fandoms: {
+    name: string;
+    slug: string;
+    avatar_url: string | null;
+  } | null;
 };
 
 type PostFeedProps = {
   fandomSlug?: string;
+  userId?: string;
 };
 
-const PostFeed = ({ fandomSlug }: PostFeedProps) => {
-  // Datos de ejemplo para las publicaciones
-  const allPosts: Post[] = [
-    {
-      id: 1,
-      slug: "nueva-pelicula-del-mcu",
-      fandom: {
-        name: "Marvel",
-        avatar: "M",
-      },
-      author: {
-        name: "Maria Gonzalez",
-        username: "maria_marvel",
-        favoriteGroups: ["Marvel", "DC Comics", "Star Wars"],
-      },
-      title: "Nueva pelicula del MCU",
-      content: "Alguien mas esta emocionado por la nueva pelicula? No puedo esperar a verla. El teaser se ve increible!",
-      image: "/posts/marvel-movie.jpg",
-      url: "https://marvel.com/movies",
-      votes: {
-        up: 342,
-        down: 12,
-      },
-      comments: 56,
-      createdAt: "2h",
-    },
-    {
-      id: 2,
-      slug: "concierto-en-ciudad-de-mexico",
-      fandom: {
-        name: "Taylor Swift",
-        avatar: "T",
-      },
-      author: {
-        name: "Carlos Ramirez",
-        username: "carlosmusic",
-        favoriteGroups: ["Taylor Swift", "Musica", "Conciertos"],
-      },
-      title: "Concierto en Ciudad de Mexico",
-      content: "El concierto en Ciudad de Mexico fue una experiencia increible. La energia de los artistas y el publico fue algo inolvidable. Alguien mas asistio? Visiten la página oficial para más fechas: https://www.taylorswift.com/events",
-      votes: {
-        up: 215,
-        down: 5,
-      },
-      comments: 87,
-      createdAt: "5h",
-    },
-    {
-      id: 3,
-      slug: "nuevo-anime-imperdible-esta-temporada",
-      fandom: {
-        name: "Anime",
-        avatar: "A",
-      },
-      author: {
-        name: "Ana Martinez",
-        username: "ana_anime",
-        favoriteGroups: ["Anime", "Manga", "Cosplay"],
-      },
-      title: "Nuevo anime imperdible esta temporada",
-      content: "He estado viendo la nueva serie que acaba de salir y es impresionante. La animacion es fluida y la historia te atrapa desde el primer capitulo. Alguien mas la esta siguiendo?",
-      image: "/posts/anime-show.jpg",
-      video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-      votes: {
-        up: 178,
-        down: 3,
-      },
-      comments: 34,
-      createdAt: "8h",
-    },
-  ];
+const PostFeed = ({ fandomSlug, userId }: PostFeedProps) => {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filtrar posts por fandom si se proporciona un slug
-  const posts = fandomSlug 
-    ? allPosts.filter(post => {
-        const postFandom = getFandomByName(post.fandom.name);
-        return postFandom?.slug === fandomSlug;
-      })
-    : allPosts;
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+      setError(null);
+      setPosts([]);
+
+      try {
+        let query = supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles!user_id ( username, avatar_url ),
+            fandoms ( name, slug, avatar_url )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (userId) {
+          query = query.eq('user_id', userId);
+        }
+
+        const { data, error: dbError } = await query;
+
+        if (dbError) {
+          throw dbError;
+        }
+
+        setPosts(data || []);
+
+      } catch (err: any) {
+        console.error("Error fetching posts:", err);
+        setError("No se pudieron cargar las publicaciones.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="border-gray-200 shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardHeader className="p-4 pb-2 flex flex-row items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-3 space-y-3">
+              <div className="h-5 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+            </CardContent>
+            <CardFooter className="p-3 pt-2 flex justify-between border-t border-gray-100 mt-2">
+              <div className="flex gap-3">
+                <div className="h-6 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-6 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-6 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+              <div className="flex gap-2">
+                 <div className="h-6 w-6 bg-gray-200 rounded-full animate-pulse"></div>
+                 <div className="h-6 w-6 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl p-6 text-center border border-red-200 shadow-sm">
+        <h3 className="text-lg font-medium text-red-700 mb-2">Error</h3>
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -132,11 +145,12 @@ const PostFeed = ({ fandomSlug }: PostFeedProps) => {
         ))
       ) : (
         <div className="bg-white rounded-xl p-6 text-center border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay publicaciones todavia</h3>
-          <p className="text-gray-600 mb-4">Se el primero en compartir algo con la comunidad!</p>
-          <Button className="rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 text-white">
-            Crear publicacion
-          </Button>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+             {userId ? "Este usuario aún no ha publicado nada" : "No hay publicaciones para mostrar"} 
+          </h3>
+          <p className="text-gray-600 mb-4">
+             {userId ? "Anímale a compartir algo o explora otros perfiles." : "Explora otros fandoms o crea la primera publicación."} 
+          </p>
         </div>
       )}
     </div>
@@ -153,10 +167,8 @@ const PostCard = ({ post }: { post: Post }) => {
     setShowComments(!showComments);
   };
 
-  // Manejadores para compartir y reportar modales
   const handleShareOpenChange = (isOpen: boolean) => {
     setIsShareOpen(isOpen);
-    // Si se está abriendo el modal de compartir, cerrar el de reportar
     if (isOpen) {
       setIsReportOpen(false);
     }
@@ -164,64 +176,85 @@ const PostCard = ({ post }: { post: Post }) => {
 
   const handleReportOpenChange = (isOpen: boolean) => {
     setIsReportOpen(isOpen);
-    // Si se está abriendo el modal de reportar, cerrar el de compartir
     if (isOpen) {
       setIsShareOpen(false);
     }
   };
 
-  // Obtener el slug del fandom para la URL
-  const fandom = getFandomByName(post.fandom.name);
-  const fandomSlug = fandom?.slug || post.fandom.name.toLowerCase();
-  
-  // URL para el post individual
-  const postUrl = `/?post=${post.slug || post.id}`;
+  const isFandomPost = post.fandoms !== null;
+  const fandomSlug = post.fandoms?.slug || '';
+  const fandomName = post.fandoms?.name || "Post de Perfil";
+  const fandomAvatarText = fandomName.charAt(0).toUpperCase();
+
+  const authorUsername = post.profiles?.username || "Usuario Desconocido";
+  const authorAvatarUrl = post.profiles?.avatar_url;
+  const authorProfileUrl = `/perfil/${authorUsername}`;
+
+  const postUrl = post.internal_path || (isFandomPost ? `/fandoms/${fandomSlug}/posts/${post.slug || post.id}` : authorProfileUrl);
+
+  const formattedDate = formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: es });
+
+  const mainImageUrl = post.image_urls && post.image_urls.length > 0 ? post.image_urls[0] : null;
 
   return (
     <div className="relative">
       <Link href={postUrl} className="absolute inset-0 z-10">
-        <span className="sr-only">Ver publicación completa</span>
+        <span className="sr-only">Ver publicación</span>
       </Link>
       <Card className="border-gray-200 shadow-sm rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow">
         <CardHeader className="p-4 pb-2 flex flex-row items-center gap-3">
-          <Link href={`/fandoms/${fandomSlug}`} className="flex-shrink-0 w-8 h-8 relative z-20">
-            <UserAvatar 
-              text={post.fandom.avatar}
-              colorClass={getFandomColor(post.fandom.name, 'from-to')}
-              size="full"
-            />
-          </Link>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <Link href={`/fandoms/${fandomSlug}`} className="font-semibold text-xs text-gray-700 hover:text-purple-700 transition-colors relative z-20">
-                {post.fandom.name}
+          {isFandomPost ? (
+            <>
+              <Link href={`/fandoms/${fandomSlug}`} className="flex-shrink-0 w-8 h-8 relative z-20">
+                <UserAvatar 
+                  text={fandomAvatarText}
+                  size="md"
+                />
               </Link>
-              <p className="text-gray-500 text-xs">• {post.createdAt}</p>
-            </div>
-            <div className="flex items-center">
-              <Link href={`/perfil/${post.author.username}`} className="text-xs text-gray-500 hover:text-purple-700 transition-colors relative z-20">
-                {post.author.username}
-              </Link>
-              <div className="ml-2 flex flex-wrap">
-                {post.author.favoriteGroups.map((group, idx) => {
-                  const groupFandom = getFandomByName(group);
-                  const groupSlug = groupFandom?.slug || group.toLowerCase().replace(/\s+/g, '-');
-                  return (
-                    <Link href={`/fandoms/${groupSlug}`} key={idx} className="inline-block px-1.5 py-0.5 bg-gray-100 text-purple-700 rounded-full text-[10px] mr-1 mb-1 hover:bg-purple-100 transition-colors relative z-20">
-                      {group}
-                    </Link>
-                  );
-                })}
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Link href={`/fandoms/${fandomSlug}`} className="font-semibold text-xs text-gray-700 hover:text-purple-700 transition-colors relative z-20">
+                    {fandomName}
+                  </Link>
+                  <p className="text-gray-500 text-xs">• {formattedDate}</p>
+                </div>
+                <div className="flex items-center">
+                  <Link href={authorProfileUrl} className="text-xs text-gray-500 hover:text-purple-700 transition-colors relative z-20">
+                    por {authorUsername}
+                  </Link>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          ) : (
+            <>
+              <Link href={authorProfileUrl} className="flex-shrink-0 w-8 h-8 relative z-20">
+                 <UserAvatar 
+                   text={authorUsername.charAt(0).toUpperCase()}
+                   src={authorAvatarUrl}
+                   size="md"
+                 />
+              </Link>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Link href={authorProfileUrl} className="font-semibold text-sm text-gray-800 hover:text-purple-700 transition-colors relative z-20">
+                    {authorUsername}
+                  </Link>
+                  <p className="text-gray-500 text-xs">• {formattedDate}</p>
+                </div>
+              </div>
+            </>
+          )}
           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full hover:bg-gray-100 relative z-20">
             <span className="sr-only">Mas opciones</span>
             <MoreVertical size={15} />
           </Button>
         </CardHeader>
         <CardContent className="p-4 pt-3">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 relative hover:text-purple-700 transition-colors">{post.title}</h3>
+          {isFandomPost && (
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 relative hover:text-purple-700 transition-colors">
+              {post.title} 
+            </h3>
+          )}
           <div className="text-sm text-gray-700 leading-relaxed mb-3 line-clamp-3">
             {post.content.split(' ').map((word, index) => {
               if (word.match(/^(https?:\/\/)/i)) { 
@@ -244,11 +277,11 @@ const PostCard = ({ post }: { post: Post }) => {
             })}
           </div>
           
-          {post.image && (
+          {mainImageUrl && (
             <div className="block mt-3 rounded-lg overflow-hidden bg-gray-100 w-full h-64 relative">
               <img 
-                src={String(post.image).match(/^https?:\/\//) ? post.image : 'https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=800&auto=format&fit=crop'} 
-                alt={`Imagen de ${post.fandom.name}`} 
+                src={mainImageUrl}
+                alt={`Imagen de ${fandomName}`}
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                 onError={(e) => {
                   if (e.currentTarget.src !== 'https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=800&auto=format&fit=crop') {
@@ -259,10 +292,10 @@ const PostCard = ({ post }: { post: Post }) => {
             </div>
           )}
 
-          {post.video && (
+          {post.video_url && (
             <div className="mt-3 rounded-lg overflow-hidden bg-gray-100 aspect-video relative">
               <iframe
-                src={post.video}
+                src={post.video_url}
                 className="w-full h-full"
                 allowFullScreen
                 title={post.title}
@@ -270,18 +303,18 @@ const PostCard = ({ post }: { post: Post }) => {
             </div>
           )}
 
-          {post.url && (
+          {post.link_url && (
             <div className="mt-3 p-3 rounded-lg border border-gray-200 bg-gray-50 relative">
               <div className="flex items-center gap-2">
                 <LinkIcon size={14} className="text-blue-600 flex-shrink-0" />
                 <a 
-                  href={post.url} 
+                  href={post.link_url}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm text-blue-600 hover:underline break-all relative z-20"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {post.url}
+                  {post.link_url}
                 </a>
               </div>
             </div>
@@ -291,22 +324,22 @@ const PostCard = ({ post }: { post: Post }) => {
           <div className="flex items-center gap-3">
             <SocialButton 
               icon={ThumbsUp} 
-              label={post.votes.up} 
+              label={post.upvotes}
               variant="active"
             />
             <SocialButton 
               icon={ThumbsDown} 
-              label={post.votes.down} 
+              label={post.downvotes}
             />
             {isMobile ? (
               <CommentsComponent 
                 postId={post.id}
-                commentsCount={post.comments}
+                commentsCount={0}
               />
             ) : (
               <SocialButton 
                 icon={MessageSquare} 
-                label={post.comments} 
+                label={0}
                 onClick={handleCommentsToggle}
               />
             )}
@@ -315,15 +348,16 @@ const PostCard = ({ post }: { post: Post }) => {
           <div className="flex items-center">
             <SharePost 
               postTitle={post.title} 
-              postSlug={post.slug || post.id.toString()} 
+              postSlug={post.slug || post.id}
               isReportOpen={isReportOpen}
               onOpenChange={handleShareOpenChange}
             />
             <ReportPost 
-              postId={post.id} 
-              postSlug={post.slug || post.id.toString()} 
+              postId={post.id}
+              postSlug={post.slug || post.id}
               isShareOpen={isShareOpen}
               onOpenChange={handleReportOpenChange}
+              fandomId={post.fandom_id}
             />
           </div>
         </CardFooter>
@@ -331,10 +365,10 @@ const PostCard = ({ post }: { post: Post }) => {
         {showComments && !isMobile && (
           <div className="border-t border-gray-100 relative z-20">
             <div className="p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Comentarios ({post.comments})</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Comentarios</h3>
               <CommentsComponent 
                 postId={post.id}
-                commentsCount={post.comments}
+                commentsCount={0}
                 forceShowComments={true}
                 hideButton={true}
               />

@@ -12,21 +12,25 @@ import {
   Loader2,
   CheckCircle
 } from "lucide-react";
+import { reportPost } from "@/lib/services/posts";
+import { useToast } from "@/components/ui/use-toast";
 
 type ReportPostProps = {
-  postId: number;
+  postId: string;
   postSlug?: string;
+  fandomId: string;
   isShareOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
-  commentId?: number;
+  commentId?: string;
 };
 
-const ReportPost = ({ postId, postSlug, isShareOpen = false, onOpenChange, commentId }: ReportPostProps) => {
+const ReportPost = ({ postId, postSlug, fandomId, isShareOpen = false, onOpenChange, commentId }: ReportPostProps) => {
   const [showReportOptions, setShowReportOptions] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [reportReason, setReportReason] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Cerrar este modal si el modal de compartir está abierto
   useEffect(() => {
@@ -48,37 +52,29 @@ const ReportPost = ({ postId, postSlug, isShareOpen = false, onOpenChange, comme
     setReportSent(false);
 
     try {
-      // --- Enviar reporte a la API ---
-      const response = await fetch('/api/report', { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          postId: commentId ? undefined : postId,  // Si hay commentId, no enviamos postId
-          commentId: commentId || undefined,       // Enviamos commentId si existe
-          reason,
-        }),
-      });
+      let success: boolean;
+      
+      if (commentId) {
+        // TO-DO: Implementar reportar comentario
+        // En este caso, se debe crear una función similar a reportPost pero para comentarios
+        throw new Error("La función para reportar comentarios aún no está implementada");
+      } else {
+        success = await reportPost(postId, fandomId, reason);
+      }
 
-      if (!response.ok) {
-        // Intentar obtener un mensaje de error del backend si existe
-        let errorMessage = 'No se pudo enviar el reporte. Inténtalo de nuevo.';
-        try {
-          const errorData = await response.json();
-          if (errorData && errorData.message) {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          console.error("Error parsing error response:", parseError);
-        }
-        throw new Error(errorMessage);
+      if (!success) {
+        throw new Error('No se pudo enviar el reporte. Inténtalo de nuevo.');
       }
 
       // --- Éxito ---
       console.log(`Reporte enviado para ${commentId ? 'comentario' : 'publicación'} por: ${reason}`);
       setReportReason(reason);
       setReportSent(true);
+      
+      toast({
+        title: "Reporte enviado",
+        description: "Gracias por ayudarnos a mantener la comunidad segura.",
+      });
       
       // Reset después de 3 segundos
       setTimeout(() => {
@@ -94,6 +90,13 @@ const ReportPost = ({ postId, postSlug, isShareOpen = false, onOpenChange, comme
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error inesperado.');
       console.error("Error al reportar:", err);
+      
+      toast({
+        title: "Error al enviar reporte",
+        description: err.message || "No se pudo procesar tu reporte. Inténtalo de nuevo más tarde.",
+        variant: "destructive"
+      });
+      
       // Mantener el modal abierto para mostrar el error por 5 segundos
       setTimeout(() => {
         setError(null); 
