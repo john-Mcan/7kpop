@@ -367,6 +367,11 @@ CREATE POLICY "Usuarios pueden crear registros de búsqueda" ON public.user_sear
 CREATE POLICY "Usuarios pueden eliminar su historial" ON public.user_searches
   FOR DELETE USING (auth.uid() = user_id);
 
+  -- Permitir a los usuarios actualizar sus propios registros de historial de búsqueda
+CREATE POLICY "Usuarios pueden actualizar su historial" ON public.user_searches
+  FOR UPDATE USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- Función para búsqueda general
 CREATE OR REPLACE FUNCTION public.search_content(
   search_term TEXT,
@@ -388,8 +393,8 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   (
-    -- Posts
-    SELECT 
+    -- Posts (Modificado para incluir posts de perfil y usar LEFT JOIN)
+    SELECT
       'post' as type,
       p.id,
       p.title,
@@ -398,22 +403,27 @@ BEGIN
       pr.username as author_name,
       p.created_at,
       p.fandom_id,
-      f.name as fandom_name,
-      p.slug,
+      f.name as fandom_name, -- Será NULL para posts de perfil
+      COALESCE(p.slug, p.id::text) as slug, -- Usar ID como fallback si el slug es NULL
       ts_rank(to_tsvector('spanish', p.title || ' ' || p.content), to_tsquery('spanish', search_term)) as rank
     FROM public.posts p
-    JOIN public.profiles pr ON p.user_id = pr.id
-    JOIN public.fandoms f ON p.fandom_id = f.id
-    WHERE 
-      p.moderation_status = 'approved' AND
-      to_tsvector('spanish', p.title || ' ' || p.content) @@ to_tsquery('spanish', search_term)
+    JOIN public.profiles pr ON p.user_id = pr.id -- Necesitamos el perfil del autor
+    LEFT JOIN public.fandoms f ON p.fandom_id = f.id -- <<<< CAMBIADO A LEFT JOIN
+    WHERE
+      (
+        p.fandom_id IS NULL -- Incluir posts de perfil
+        OR
+        p.moderation_status = 'approved' -- O incluir posts de fandom aprobados
+      )
+      AND
+      to_tsvector('spanish', p.title || ' ' || p.content) @@ to_tsquery('spanish', search_term) -- Condición de búsqueda de texto
     ORDER BY rank DESC
     LIMIT limit_count
   )
   UNION ALL
   (
-    -- Usuarios
-    SELECT 
+    -- Usuarios (Sin cambios)
+    SELECT
       'user' as type,
       p.id,
       p.username as title,
@@ -423,18 +433,18 @@ BEGIN
       p.created_at,
       NULL as fandom_id,
       NULL as fandom_name,
-      NULL as slug,
+      p.username as slug, -- Usar username como 'slug' para perfiles
       ts_rank(to_tsvector('spanish', p.username || ' ' || COALESCE(p.bio, '')), to_tsquery('spanish', search_term)) as rank
     FROM public.profiles p
-    WHERE 
+    WHERE
       to_tsvector('spanish', p.username || ' ' || COALESCE(p.bio, '')) @@ to_tsquery('spanish', search_term)
     ORDER BY rank DESC
     LIMIT limit_count
   )
   UNION ALL
   (
-    -- Fandoms
-    SELECT 
+    -- Fandoms (Sin cambios)
+    SELECT
       'fandom' as type,
       f.id,
       f.name as title,
@@ -448,7 +458,7 @@ BEGIN
       ts_rank(to_tsvector('spanish', f.name || ' ' || COALESCE(f.description, '')), to_tsquery('spanish', search_term)) as rank
     FROM public.fandoms f
     LEFT JOIN public.profiles pr ON f.created_by = pr.id
-    WHERE 
+    WHERE
       f.status = 'approved' AND
       to_tsvector('spanish', f.name || ' ' || COALESCE(f.description, '')) @@ to_tsquery('spanish', search_term)
     ORDER BY rank DESC
@@ -456,9 +466,8 @@ BEGIN
   );
 END;
 $$;
-```
 
-## Notas de implementación
+```## Notas de implementación
 
 1. **Flujo de moderación para posts:**
    - Los posts nuevos tienen `moderation_status = 'approved'` por defecto
@@ -474,3 +483,71 @@ $$;
    - Administradores ven y gestionan TODOS los reportes
    - Moderadores solo ven/gestionan reportes de sus fandoms asignados
    - Reportes usuario-a-usuario solo son manejados por administradores 
+
+-- Tabla para gestionar seguidores/seguidos entre usuarios
+
+CREATE TABLE IF NOT EXISTS public.user_follows (
+  follower_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  followed_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  PRIMARY KEY (follower_id, followed_id)
+);
+
+-- Habilitar RLS en la tabla
+ALTER TABLE public.user_follows ENABLE ROW LEVEL SECURITY;
+
+-- Políticas RLS para tabla de seguidores
+-- Permitir a cualquiera ver las relaciones de seguimiento
+CREATE POLICY "Cualquiera puede ver las relaciones de seguimiento" ON public.user_follows
+  FOR SELECT USING (true);
+
+-- Solo permitir a usuarios autenticados seguir a otros
+CREATE POLICY "Usuarios autenticados pueden seguir a otros" ON public.user_follows
+  FOR INSERT WITH CHECK (auth.uid() = follower_id);
+
+-- Los usuarios solo pueden dejar de seguir si ellos mismos son el seguidor
+CREATE POLICY "Usuarios pueden dejar de seguir" ON public.user_follows
+  FOR DELETE USING (auth.uid() = follower_id);
+
+-- Crear índices para optimizar consultas
+CREATE INDEX IF NOT EXISTS idx_user_follows_follower_id ON public.user_follows(follower_id);
+CREATE INDEX IF NOT EXISTS idx_user_follows_followed_id ON public.user_follows(followed_id);
+
+-- Función para obtener conteo de seguidores
+CREATE OR REPLACE FUNCTION public.get_follower_count(user_id UUID)
+RETURNS INTEGER
+LANGUAGE SQL
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COUNT(*)::INTEGER
+  FROM public.user_follows
+  WHERE followed_id = user_id;
+$$;
+
+-- Función para obtener conteo de seguidos
+CREATE OR REPLACE FUNCTION public.get_following_count(user_id UUID)
+RETURNS INTEGER
+LANGUAGE SQL
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COUNT(*)::INTEGER
+  FROM public.user_follows
+  WHERE follower_id = user_id;
+$$;
+
+-- Función para verificar si un usuario sigue a otro
+CREATE OR REPLACE FUNCTION public.is_following(follower UUID, followed UUID)
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.user_follows
+    WHERE follower_id = follower AND followed_id = followed
+  );
+$$; 
+

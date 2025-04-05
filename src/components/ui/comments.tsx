@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MessageSquare, Send, ThumbsUp, ThumbsDown, MoreVertical, X, Reply } from "lucide-react";
@@ -31,12 +31,14 @@ const CommentsComponent = (props: CommentsProps) => {
   const [comments, setComments] = useState<CommentWithDetails[]>([]);
   const [showComments, setShowComments] = useState(forceShowComments);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { isMobile } = useDeviceDetect();
   const [replyingTo, setReplyingTo] = useState<CommentWithDetails | null>(null);
-  const [replyContent, setReplyContent] = useState("");
   const { toast } = useToast();
+
+  // Referencias para los textareas
+  const newCommentRef = useRef<HTMLTextAreaElement>(null);
+  const replyRefs = useRef<{[key: string]: HTMLTextAreaElement | null}>({});
 
   useEffect(() => {
     setShowComments(forceShowComments);
@@ -88,7 +90,7 @@ const CommentsComponent = (props: CommentsProps) => {
                   author:user_id(*)
                 `)
                 .eq('parent_comment_id', comment.comment.id)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: true }); // Aseguramos orden cronológico
 
               if (!repliesError && replies && replies.length > 0) {
                 comment.replies = replies.map(reply => ({
@@ -137,7 +139,8 @@ const CommentsComponent = (props: CommentsProps) => {
 
   // Manejar el envío de un nuevo comentario
   const handleSubmitComment = async () => {
-    if (!newComment.trim()) return;
+    const commentContent = newCommentRef.current?.value?.trim();
+    if (!commentContent) return;
     
     try {
       // Verificar si el usuario está autenticado
@@ -156,7 +159,7 @@ const CommentsComponent = (props: CommentsProps) => {
       const { data, error } = await supabase
         .from('comments')
         .insert({
-          content: newComment,
+          content: commentContent,
           user_id: user.id,
           post_id: postId,
           parent_comment_id: null
@@ -188,7 +191,11 @@ const CommentsComponent = (props: CommentsProps) => {
         
         // Añadir el nuevo comentario al inicio de la lista
         setComments([newCommentObj, ...comments]);
-        setNewComment("");
+        
+        // Limpiar el textarea usando la referencia
+        if (newCommentRef.current) {
+          newCommentRef.current.value = "";
+        }
         
         toast({
           title: "Comentario publicado",
@@ -207,7 +214,12 @@ const CommentsComponent = (props: CommentsProps) => {
 
   // Manejar el envío de una respuesta a un comentario
   const handleSubmitReply = async () => {
-    if (!replyContent.trim() || !replyingTo) return;
+    if (!replyingTo) return;
+    
+    const replyTextarea = replyRefs.current[replyingTo.comment.id];
+    const replyText = replyTextarea?.value?.trim();
+    
+    if (!replyText) return;
 
     try {
       // Verificar si el usuario está autenticado
@@ -226,7 +238,7 @@ const CommentsComponent = (props: CommentsProps) => {
       const { data, error } = await supabase
         .from('comments')
         .insert({
-          content: replyContent,
+          content: replyText,
           user_id: user.id,
           post_id: postId,
           parent_comment_id: replyingTo.comment.id
@@ -273,7 +285,11 @@ const CommentsComponent = (props: CommentsProps) => {
         };
 
         setComments(comments.map(comment => addReplyToComment(comment)));
-        setReplyContent("");
+        
+        // Limpiar el textarea y cerrar el formulario de respuesta
+        if (replyTextarea) {
+          replyTextarea.value = "";
+        }
         setReplyingTo(null);
         
         toast({
@@ -294,13 +310,19 @@ const CommentsComponent = (props: CommentsProps) => {
   // Manejar clic en responder
   const handleReplyClick = (comment: CommentWithDetails) => {
     setReplyingTo(comment);
-    setReplyContent("");
+    
+    // Foco en el textarea de respuesta después de que el DOM se actualice
+    setTimeout(() => {
+      const replyTextarea = replyRefs.current[comment.comment.id];
+      if (replyTextarea) {
+        replyTextarea.focus();
+      }
+    }, 0);
   };
 
   // Cancelar respuesta
   const handleCancelReply = () => {
     setReplyingTo(null);
-    setReplyContent("");
   };
 
   // Formatear fecha relativa
@@ -317,6 +339,46 @@ const CommentsComponent = (props: CommentsProps) => {
     // Para fechas más antiguas, mostrar la fecha completa
     return date.toLocaleDateString();
   };
+
+  // Componente para ingresar una respuesta
+  const ReplyInput = ({ comment }: { comment: CommentWithDetails }) => (
+    <div className="mt-4 flex items-start gap-3">
+      <div className="w-10 h-10 flex-shrink-0">
+        <UserAvatar
+          text="U"
+          size="md"
+        />
+      </div>
+      <div className="flex-1 relative">
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <span>Respondiendo a <span className="font-medium text-gray-700">{comment.author.username}</span></span>
+          <button
+            onClick={handleCancelReply}
+            className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600"
+            aria-label="Cancelar respuesta"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        <textarea
+          ref={(el) => {
+            replyRefs.current[comment.comment.id] = el;
+            return undefined;
+          }}
+          placeholder={`Escribe una respuesta a ${comment.author.username}...`}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400 min-h-[60px] resize-none pr-10"
+          autoFocus
+        />
+        <button
+          onClick={handleSubmitReply}
+          className={`absolute right-2 bottom-2 p-1.5 rounded-full text-purple-600 hover:bg-purple-50`}
+          aria-label="Enviar respuesta"
+        >
+          <Send size={16} />
+        </button>
+      </div>
+    </div>
+  );
 
   // Renderizar un comentario individual
   const renderComment = (comment: CommentWithDetails, isReply = false) => (
@@ -382,49 +444,6 @@ const CommentsComponent = (props: CommentsProps) => {
     </div>
   );
 
-  // Componente para ingresar una respuesta
-  const ReplyInput = ({ comment }: { comment: CommentWithDetails }) => (
-    <div className="mt-4 flex items-start gap-3">
-      <div className="w-10 h-10 flex-shrink-0">
-        <UserAvatar
-          text="U"
-          size="md"
-        />
-      </div>
-      <div className="flex-1 relative">
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-          <span>Respondiendo a <span className="font-medium text-gray-700">{comment.author.username}</span></span>
-          <button
-            onClick={handleCancelReply}
-            className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600"
-            aria-label="Cancelar respuesta"
-          >
-            <X size={14} />
-          </button>
-        </div>
-        <textarea
-          placeholder={`Escribe una respuesta a ${comment.author.username}...`}
-          value={replyContent}
-          onChange={(e) => setReplyContent(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400 min-h-[60px] resize-none pr-10"
-          autoFocus
-        />
-        <button
-          onClick={handleSubmitReply}
-          disabled={!replyContent.trim()}
-          className={`absolute right-2 bottom-2 p-1.5 rounded-full ${
-            replyContent.trim()
-              ? "text-purple-600 hover:bg-purple-50"
-              : "text-gray-300 cursor-not-allowed"
-          }`}
-          aria-label="Enviar respuesta"
-        >
-          <Send size={16} />
-        </button>
-      </div>
-    </div>
-  );
-
   // Componente para ingresar un comentario nuevo
   const CommentInput = () => (
     <div className="flex items-start gap-3 pt-4">
@@ -436,19 +455,13 @@ const CommentsComponent = (props: CommentsProps) => {
       </div>
       <div className="flex-1 relative">
         <textarea
+          ref={newCommentRef}
           placeholder="Escribe un comentario..."
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 focus:border-purple-400 min-h-[80px] resize-none pr-10"
         />
         <button
           onClick={handleSubmitComment}
-          disabled={!newComment.trim()}
-          className={`absolute right-2 bottom-2 p-1.5 rounded-full ${
-            newComment.trim()
-              ? "text-purple-600 hover:bg-purple-50"
-              : "text-gray-300 cursor-not-allowed"
-          }`}
+          className="absolute right-2 bottom-2 p-1.5 rounded-full text-purple-600 hover:bg-purple-50"
           aria-label="Enviar comentario"
         >
           <Send size={16} />

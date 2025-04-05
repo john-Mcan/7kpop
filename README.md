@@ -227,3 +227,21 @@ Ver archivos `SUPABASE.md` y `SUPABASE3.md` para la documentación completa sobr
 ## Licencia
 
 [MIT](LICENSE) 
+
+## Correcciones Técnicas
+
+### abril 2025 - Corrección del componente de comentarios
+
+Se corrigió un problema en el componente de comentarios (components/ui/comments.tsx) que impedía la correcta entrada de texto:
+
+- **Problema original:** 
+  - En el comentario principal solo se podía agregar un carácter a la vez, perdiendo la selección del input después de cada pulsación.
+  - En las respuestas a comentarios, los caracteres se visualizaban en orden inverso (ej: "123" se mostraba como "321").
+
+- **Solución implementada:**
+  - Se reemplazaron los estados controlados (useState) por referencias no controladas (useRef) para los campos de texto.
+  - Se implementó un objeto de referencias indexado por ID de comentario para manejar múltiples respuestas simultáneamente.
+  - Se aseguró el orden cronológico correcto de las respuestas en la consulta a Supabase.
+  - Se implementó limpieza inmediata de los inputs después de enviar comentarios o respuestas.
+
+Esta solución mejora significativamente la experiencia de usuario al interactuar con la sección de comentarios, eliminando problemas de usabilidad y garantizando que el texto ingresado se muestre correctamente. 

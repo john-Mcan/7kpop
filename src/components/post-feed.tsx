@@ -157,7 +157,7 @@ const PostFeed = ({ fandomSlug, userId }: PostFeedProps) => {
   );
 };
 
-const PostCard = ({ post }: { post: Post }) => {
+export const PostCard = ({ post }: { post: Post }) => {
   const [showComments, setShowComments] = useState(false);
   const { isMobile } = useDeviceDetect();
   const [isShareOpen, setIsShareOpen] = useState(false);

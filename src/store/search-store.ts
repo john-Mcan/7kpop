@@ -11,6 +11,7 @@ interface SearchState {
   setActiveTab: (tab: string) => void
   search: (q?: string) => Promise<void>
   clearHistory: () => Promise<void>
+  resetSearch: () => void
 }
 
 export const useSearchStore = create<SearchState>()(
@@ -33,7 +34,7 @@ export const useSearchStore = create<SearchState>()(
           return
         }
         
-        set({ isLoading: true })
+        set({ isLoading: true, results: [] })
         
         try {
           // Comentar o eliminar esta parte para evitar duplicados con page.tsx
@@ -89,13 +90,22 @@ export const useSearchStore = create<SearchState>()(
         } catch (error) {
           console.error('Error al borrar historial:', error)
         }
+      },
+      
+      resetSearch: () => {
+        console.log('[resetSearch] Reseteando estado de búsqueda...');
+        set({
+          query: '',
+          results: [],
+          isLoading: false,
+        });
       }
     }),
     {
       name: 'search-storage',
       partialize: (state) => ({ 
         query: state.query,
-        activeTab: state.activeTab
+        activeTab: state.activeTab,
       })
     }
   )

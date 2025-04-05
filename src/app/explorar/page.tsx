@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import NavigationSidebar from "@/components/navigation-sidebar";
 import TrendingSidebar from "@/components/trending-sidebar";
 import MobileNav from "@/components/mobile-nav";
@@ -11,21 +11,30 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchStore } from "@/store/search-store";
 import { supabase } from "@/lib/supabase";
-import PostCard from "@/components/post-card";
+import { PostCard } from "@/components/post-feed";
 import FandomCard from "@/components/fandom-card";
 import Link from "next/link";
 import GlobalSearchBar from "@/components/global-search-bar";
 
 export default function ExplorePage() {
-  const { activeTab, setActiveTab, search, query, setQuery } = useSearchStore();
+  const { 
+    query: globalQuery,
+    setQuery: setGlobalQuery, 
+    search, 
+    resetSearch, 
+    activeTab, 
+    setActiveTab 
+  } = useSearchStore();
+  
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [isLoadingSearches, setIsLoadingSearches] = useState(true);
-  const [trendingSearches, setTrendingSearches] = useState<string[]>([]);
-  const [postsPopulares, setPostsPopulares] = useState<any[]>([]);
-  const [fandomsDestacados, setFandomsDestacados] = useState<any[]>([]);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isLoadingSearches, setIsLoadingSearches] = useState(true);
+  const [postsPopulares, setPostsPopulares] = useState<any[]>([]);
+  const [fandomsDestacados, setFandomsDestacados] = useState<any[]>([]);
+
   const fetchRecentSearches = useCallback(async () => {
     try {
       setIsLoadingSearches(true);
@@ -63,111 +72,60 @@ export default function ExplorePage() {
     }
   }, []);
   
-  const handleSearch = useCallback((q: string) => {
-    const trimmedQuery = q.trim();
-    if (!trimmedQuery) {
-        return;
-    }
+  const handleSearch = useCallback((newQuery: string) => {
+    const trimmedQuery = newQuery.trim();
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
+    const params = new URLSearchParams(searchParams.toString());
+    if (trimmedQuery) {
+      params.set('q', trimmedQuery);
+    } else {
+      params.delete('q');
+    }
+    router.replace(`/explorar?${params.toString()}`, { scroll: false });
+
+    setGlobalQuery(trimmedQuery);
+
+    if (!trimmedQuery) {
+      resetSearch();
+      return;
+    }
+    
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        console.log(`[handleSearch Debounced] Executing for query: "${trimmedQuery}"`);
-
-        await search(trimmedQuery);
-
-        setQuery('');
-
-        setRecentSearches(prevSearches => {
-          const updatedSearches = [trimmedQuery, ...prevSearches.filter(s => s !== trimmedQuery)].slice(0, 5);
-          console.log('[handleSearch Debounced] Optimistic update state:', updatedSearches);
-          return updatedSearches;
-        });
+        await search();
 
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
-            console.log(`[handleSearch Debounced] Inserting query: "${trimmedQuery}" for user: ${user.id}`);
-            
-            // Volver a insert, pero manejar silenciosamente los errores de duplicados
-            const { error: insertError } = await supabase
+            const { error: upsertError } = await supabase
               .from('user_searches')
-              .insert({ user_id: user.id, query: trimmedQuery });
+              .upsert(
+                { user_id: user.id, query: trimmedQuery, created_at: new Date().toISOString() },
+                { onConflict: 'user_id, query', ignoreDuplicates: false }
+              );
 
-            if (insertError) {
-              // Ignorar errores de duplicados (código 409 Conflict)
-              // Solo mostrar en consola otros tipos de errores
-              if (!insertError.message.includes('duplicate key value') && 
-                  insertError.code !== '23505' && // Código para duplicados en Postgres
-                  insertError.code !== '409') {   // Código HTTP para conflicto
-                console.warn('[handleSearch Debounced] Error al guardar búsqueda en historial:', insertError);
-              }
+            if (upsertError) {
+              console.error('Error al guardar búsqueda:', upsertError);
+            } else {
+              fetchRecentSearches();
             }
           }
         } catch (dbError) {
-          console.error('[handleSearch Debounced] Error al intentar guardar búsqueda:', dbError);
+          console.error('Error al interactuar con la base de datos:', dbError);
         }
 
       } catch (searchError) {
-        console.error("[handleSearch Debounced] Error durante la búsqueda (search store):", searchError);
+        console.error('Error durante la búsqueda:', searchError);
       }
     }, 300);
 
-  }, [search, setQuery]);
+  }, [searchParams, router, setGlobalQuery, resetSearch, search, fetchRecentSearches]);
   
-  useEffect(() => {
-    fetchRecentSearches();
-    
-    fetchPopularPosts();
-    fetchFeaturedFandoms();
-    
-    const q = searchParams.get('q');
-    if (q) {
-      setQuery(q);
-      
-      // Si hay un parámetro de búsqueda en la URL y es una carga inicial,
-      // guardamos en el historial y realizamos la búsqueda
-      // Esto cubre el caso de navegación desde la página principal
-      const isInitialLoad = !document.referrer.includes('/explorar');
-      if (isInitialLoad) {
-        // Solo guardar en historial, sin usar handleSearch para evitar loops
-        const saveToHistory = async () => {
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              console.log(`[Initial Navigation] Inserting query: "${q}" for user: ${user.id}`);
-              const { error: insertError } = await supabase
-                .from('user_searches')
-                .insert({ user_id: user.id, query: q });
-                
-              // Ignorar silenciosamente errores de duplicados
-              if (insertError && 
-                  !insertError.message.includes('duplicate key value') && 
-                  insertError.code !== '23505' && 
-                  insertError.code !== '409') {
-                console.warn('[Initial Navigation] Error al guardar búsqueda:', insertError);
-              }
-              
-              // Actualizar optimistamente el historial local
-              setRecentSearches(prevSearches => {
-                const updatedSearches = [q, ...prevSearches.filter(s => s !== q)].slice(0, 5);
-                return updatedSearches;
-              });
-            }
-          } catch (error) {
-            console.error('Error guardando historial inicial:', error);
-          }
-        };
-        
-        saveToHistory();
-      }
-    }
-  }, [searchParams, fetchRecentSearches, setQuery]);
-  
-  const fetchPopularPosts = async () => {
+  const fetchPopularPosts = useCallback(async () => {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
@@ -187,9 +145,9 @@ export default function ExplorePage() {
     if (data) {
       setPostsPopulares(data);
     }
-  };
+  }, []);
   
-  const fetchFeaturedFandoms = async () => {
+  const fetchFeaturedFandoms = useCallback(async () => {
     const { data } = await supabase
       .from('fandoms')
       .select(`
@@ -204,9 +162,9 @@ export default function ExplorePage() {
     if (data) {
       setFandomsDestacados(data);
     }
-  };
+  }, []);
   
-  const handleClearHistory = async () => {
+  const handleClearHistory = useCallback(async () => {
     try {
       setIsLoadingSearches(true);
       
@@ -233,7 +191,13 @@ export default function ExplorePage() {
     } finally {
       setIsLoadingSearches(false);
     }
-  };
+  }, []);
+  
+  useEffect(() => {
+    fetchRecentSearches();
+    fetchPopularPosts();
+    fetchFeaturedFandoms();
+  }, [fetchRecentSearches, fetchPopularPosts, fetchFeaturedFandoms]);
   
   useEffect(() => {
     return () => {
@@ -241,6 +205,19 @@ export default function ExplorePage() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
+  }, []);
+  
+  // Ejecutar búsqueda automáticamente si hay un parámetro q en la URL
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q && q.trim() && q !== globalQuery) {
+      setGlobalQuery(q);
+      // Ejecutar la búsqueda después de un breve retraso para asegurar que el estado se ha actualizado
+      setTimeout(() => {
+        search();
+      }, 100);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   return (
@@ -316,7 +293,7 @@ export default function ExplorePage() {
                   
                   <SearchResults />
                   
-                  {!query && (
+                  {!globalQuery && (
                     <div className="space-y-4 mt-4">
                       <h2 className="text-lg font-medium">Posts populares</h2>
                       <div className="space-y-3">

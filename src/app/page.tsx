@@ -4,7 +4,7 @@ import PostFeed from "@/components/post-feed";
 import MobileNav from "@/components/mobile-nav";
 import { Suspense } from "react";
 import HomePostHandler from "../components/home-post-handler";
-import GlobalSearchBar from "@/components/global-search-bar";
+import IndexSearchBar from "@/components/index-search-bar";
 
 export default function Home({
   searchParams,
@@ -43,7 +43,7 @@ export default function Home({
                       </div>
                     </div>
                     
-                    <GlobalSearchBar />
+                    <IndexSearchBar />
                   </div>
                   
                   <div className="mt-6">
