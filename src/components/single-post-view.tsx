@@ -223,11 +223,12 @@ export default function SinglePostView({ postSlug, onBack }: SinglePostViewProps
   // Extraer datos del post para facilitar acceso
   const { post, author, fandom } = postData;
   
-  // Obtener el slug del fandom para la navegación
-  const fandomSlug = fandom.slug || fandom.name.toLowerCase().replace(/\s+/g, '-');
+  // Obtener el slug del fandom para la navegación (si existe)
+  const isFandomPost = fandom !== null && fandom !== undefined;
+  const fandomSlug = isFandomPost ? (fandom.slug || fandom.name.toLowerCase().replace(/\s+/g, '-')) : '';
   
-  // Obtener el color del fandom para el avatar
-  const fandomColorClass = getFandomColor(fandom.name, 'from-to');
+  // Obtener el color del fandom para el avatar (o usar un color predeterminado para posts de usuario)
+  const fandomColorClass = isFandomPost ? getFandomColor(fandom.name, 'from-to') : 'from-purple-600 to-indigo-500';
 
   return (
     <div className="space-y-6 relative">
@@ -286,24 +287,46 @@ export default function SinglePostView({ postSlug, onBack }: SinglePostViewProps
           <ArrowLeft size={20} />
         </Button>
         
-        {/* Avatar y Nombre del Fandom como Link - Avatar más grande */}
-        <Link 
-          href={`/fandoms/${fandomSlug}`} 
-          className="flex items-center gap-3 group" 
-          aria-label={`Ver fandom ${fandom.name}`}
-        >
-          {/* Avatar del Fandom - Cambiar de sm a md */}
-          <div className="flex-shrink-0">
-            <UserAvatar 
-              text={fandom.avatar_url || fandom.name.charAt(0).toUpperCase()}
-              size="md" 
-            />
-          </div>
-          {/* Nombre del Fandom */}
-          <h1 className="text-xl font-semibold text-gray-800 group-hover:text-purple-700 transition-colors">
-            {fandom.name}
-          </h1>
-        </Link>
+        {isFandomPost ? (
+          /* Avatar y Nombre del Fandom como Link */
+          <Link 
+            href={`/fandoms/${fandomSlug}`} 
+            className="flex items-center gap-3 group" 
+            aria-label={`Ver fandom ${fandom.name}`}
+          >
+            {/* Avatar del Fandom */}
+            <div className="flex-shrink-0">
+              <UserAvatar 
+                text={fandom.avatar_url || fandom.name.charAt(0).toUpperCase()}
+                size="md" 
+              />
+            </div>
+            {/* Nombre del Fandom */}
+            <h1 className="text-xl font-semibold text-gray-800 group-hover:text-purple-700 transition-colors">
+              {fandom.name}
+            </h1>
+          </Link>
+        ) : (
+          /* Avatar y Nombre del Usuario como Link */
+          <Link 
+            href={`/perfil/${author.username || ''}`} 
+            className="flex items-center gap-3 group" 
+            aria-label={`Ver perfil de ${author.username || 'Usuario'}`}
+          >
+            {/* Avatar del Usuario */}
+            <div className="flex-shrink-0">
+              <UserAvatar 
+                text={author.avatar_url || (author.username || 'U').charAt(0).toUpperCase()}
+                src={author.avatar_url}
+                size="md" 
+              />
+            </div>
+            {/* Nombre del Usuario */}
+            <h1 className="text-xl font-semibold text-gray-800 group-hover:text-purple-700 transition-colors">
+              {author.username || 'Usuario'}
+            </h1>
+          </Link>
+        )}
       </div>
       
       <div ref={postContainerRef} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -448,7 +471,7 @@ export default function SinglePostView({ postSlug, onBack }: SinglePostViewProps
               postSlug={post.slug || postSlug}
               isShareOpen={isShareOpen}
               onOpenChange={handleReportOpenChange}
-              fandomId={fandom.id}
+              fandomId={fandom?.id}
             />
           </div>
         </div>

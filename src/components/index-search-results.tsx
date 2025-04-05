@@ -112,7 +112,7 @@ function PostResultCard({ result }: { result: SearchResult }) {
   
   const postUrl = isFandomPost 
     ? `/fandoms/${result.fandom_slug || ''}/posts/${result.slug || result.id}`
-    : (result.author_name ? `/perfil/${result.author_name}` : '#');
+    : (result.author_name ? `/perfil/${result.author_name}/posts/${result.slug || result.id}` : '#');
   
   const formattedDate = result.created_at 
     ? formatDistanceStrict(new Date(result.created_at), new Date(), { addSuffix: true, locale: es }) 

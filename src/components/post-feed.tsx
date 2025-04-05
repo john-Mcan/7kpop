@@ -190,7 +190,10 @@ export const PostCard = ({ post }: { post: Post }) => {
   const authorAvatarUrl = post.profiles?.avatar_url;
   const authorProfileUrl = `/perfil/${authorUsername}`;
 
-  const postUrl = post.internal_path || (isFandomPost ? `/fandoms/${fandomSlug}/posts/${post.slug || post.id}` : authorProfileUrl);
+  const postUrl = post.internal_path || 
+    (isFandomPost 
+      ? `/fandoms/${fandomSlug}/posts/${post.slug || post.id}`
+      : `/perfil/${authorUsername}/posts/${post.slug || post.id}`);
 
   const formattedDate = formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: es });
 

@@ -18,7 +18,7 @@ import { useToast } from "@/components/ui/use-toast";
 type ReportPostProps = {
   postId: string;
   postSlug?: string;
-  fandomId: string;
+  fandomId?: string | null;
   isShareOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
   commentId?: string;
@@ -59,7 +59,7 @@ const ReportPost = ({ postId, postSlug, fandomId, isShareOpen = false, onOpenCha
         // En este caso, se debe crear una función similar a reportPost pero para comentarios
         throw new Error("La función para reportar comentarios aún no está implementada");
       } else {
-        success = await reportPost(postId, fandomId, reason);
+        success = await reportPost(postId, fandomId || null, reason);
       }
 
       if (!success) {

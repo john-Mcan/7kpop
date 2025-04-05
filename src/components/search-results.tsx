@@ -123,7 +123,7 @@ function renderPostResult(post: SearchResult) {
   const isFandomPost = !!post.fandom_id;
   const postUrl = isFandomPost
     ? `/fandoms/${post.fandom_slug || ''}/posts/${post.slug || post.id}`
-    : (post.author_name ? `/perfil/${post.author_name}` : '#');
+    : (post.author_name ? `/perfil/${post.author_name}/posts/${post.slug || post.id}` : '#');
     
   const imageUrl = post.post_image_url;
   const fandomAvatar = post.fandom_avatar_url;

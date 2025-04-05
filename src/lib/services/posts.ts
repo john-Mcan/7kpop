@@ -10,7 +10,6 @@ export async function getPostBySlug(slug: string): Promise<PostWithDetails | nul
     .from('posts')
     .select('*')
     .eq('slug', slug)
-    .eq('moderation_status', 'approved')
     .single();
 
   if (error || !post) return null;
@@ -21,13 +20,19 @@ export async function getPostBySlug(slug: string): Promise<PostWithDetails | nul
     .select('*')
     .eq('id', post.user_id)
     .single();
-
-  // Obtener el fandom del post
-  const { data: fandom } = await supabase
-    .from('fandoms')
-    .select('*')
-    .eq('id', post.fandom_id)
-    .single();
+    
+  let fandom = null;
+  
+  // Obtener el fandom del post (solo si tiene fandom_id)
+  if (post.fandom_id) {
+    const { data: fandomData } = await supabase
+      .from('fandoms')
+      .select('*')
+      .eq('id', post.fandom_id)
+      .single();
+      
+    fandom = fandomData;
+  }
 
   // Construir el objeto completo
   const postWithDetails: PostWithDetails = {
@@ -123,20 +128,25 @@ export async function getPostComments(postId: string) {
 /**
  * Crea un reporte sobre una publicación
  */
-export async function reportPost(postId: string, fandomId: string, reason: string): Promise<boolean> {
+export async function reportPost(postId: string, fandomId: string | null, reason: string): Promise<boolean> {
   const { data: user } = await supabase.auth.getUser();
   if (!user || !user.user) return false;
   
+  // Si no hay fandomId (post de usuario), asignar un valor predeterminado o manejar el caso específico
+  const reportData: any = {
+    reporter_id: user.user.id,
+    post_id: postId,
+    reason: reason
+  };
+  
+  // Solo añadir fandom_id si existe
+  if (fandomId) {
+    reportData.fandom_id = fandomId;
+  }
+  
   const { error } = await supabase
     .from('reports')
-    .insert([
-      {
-        reporter_id: user.user.id,
-        post_id: postId,
-        fandom_id: fandomId,
-        reason: reason
-      }
-    ]);
+    .insert([reportData]);
   
   return !error;
 } 
